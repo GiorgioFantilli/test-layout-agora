@@ -1,24 +1,55 @@
-import logo from './logo.svg';
-import './App.css';
+import React, { useEffect } from 'react';
+import './style.css'; // Importa il tuo CSS
+import { AppProvider, useAppContext } from './AppContext';
+import Navbar from './components/Navbar';
+import MainContent from './components/MainContent';
+
+// Spostiamo qui la logica SDK
+const defaultConfig = { app_title: "Sistema Protocollo PEC", comune_name: "Comune di Roma" };
+const capabilities = { recolorables: [], borderables: [], fontEditable: undefined, fontSizeable: undefined };
+
+function AppContent() {
+  const { state, dispatch } = useAppContext();
+
+  // Logica Element SDK
+  useEffect(() => {
+    if (window.elementSdk) {
+      const render = (config) => {
+        dispatch({ type: 'UPDATE_CONFIG', payload: config });
+      };
+      
+      const mapToEditPanelValues = (config) => {
+        return new Map([
+          ["app_title", config.app_title || defaultConfig.app_title],
+          ["comune_name", config.comune_name || defaultConfig.comune_name]
+        ]);
+      };
+
+      // Usa lo stato del contesto per mapToEditPanelValues
+      const sdkConfig = state.config || defaultConfig;
+      window.elementSdk.init({ 
+        defaultConfig: sdkConfig, 
+        render, 
+        mapToCapabilities: () => capabilities, 
+        mapToEditPanelValues: () => mapToEditPanelValues(sdkConfig) 
+      });
+    }
+  }, [state.config, dispatch]);
+
+
+  return (
+    <>
+      <Navbar />
+      <MainContent />
+    </>
+  );
+}
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <AppProvider>
+      <AppContent />
+    </AppProvider>
   );
 }
 
