@@ -1,26 +1,93 @@
 import React, { useState } from 'react';
 import { useAppContext } from '../AppContext';
 
+// Helper per formattare la data
+function formatEmailDate(isoString) {
+  const date = new Date(isoString);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  // Confronta solo la data, non l'ora
+  if (date.toDateString() === today.toDateString()) {
+    return 'Oggi';
+  }
+  if (date.toDateString() === yesterday.toDateString()) {
+    return 'Ieri';
+  }
+  // Formato italiano gg/mm/aaaa
+  return date.toLocaleDateString('it-IT', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+}
+
+
 // Sotto-componente per un singolo item
-function EmailItem({ emailId, email, onSelect }) {
+function EmailItem({ emailId, email, onSelect, isSelected }) {
+  const { dispatch } = useAppContext(); // Usato per l'azione di analisi
   const [isLoading, setIsLoading] = useState(false);
 
   const handleAnalyze = (e) => {
-    e.stopPropagation(); // Impedisce di selezionare l'email
+    e.stopPropagation();
     setIsLoading(true);
     setTimeout(() => {
       setIsLoading(false);
+      // Simula il completamento dell'analisi e aggiorna lo stato
+      dispatch({ type: 'MARK_AS_ANALYZED', payload: emailId });
     }, 2000);
   };
 
   const bodyPreview = (email.body.split('\n')[0] || '').substring(0, 100) + (email.body.length > 100 ? '...' : '');
-  const attachmentText = `${email.attachments} allegat${email.attachments === 1 ? 'o' : 'i'}`;
   
-  // Trova le email "unread" per la UI
-  const isUnread = emailId.startsWith('unread');
+  // Logica allegati basata sull'array
+  const attachmentCount = email.attachments ? email.attachments.length : 0;
+  const attachmentText = `${attachmentCount} allegat${attachmentCount === 1 ? 'o' : 'i'}`;
+
+  const itemClasses = [
+    "email-item group",
+    isSelected ? "email-selected" : ""
+  ].filter(Boolean).join(" ");
+  
+  // MODIFICATO: Classi del bottone AI
+  const aiButtonClasses = [
+    "ai-button",
+    "list-ai-button",
+    isLoading ? "ai-loading-list" : "opacity-0 group-hover:opacity-100" // Mostra se in loading, altrimenti in hover
+  ].filter(Boolean).join(" ");
+
+
+  // Determina cosa mostrare nell'area "aside"
+  const renderAsideAction = () => {
+    if (email.status === 'analyzed') {
+      return <span className="ai-badge-list ai-badge-analyzed"><i className="fas fa-check-double"></i> Analizzata</span>;
+    }
+    // MODIFICATO: Logica di lettura (Richiesta 4)
+    // Non mostrare "Analizza" per l'email "visualmente unread" (che ora è 'read' nei dati)
+    if (email.status === 'read' || email.status === 'unread') {
+      return (
+        <button 
+          className={aiButtonClasses} 
+          onClick={handleAnalyze} 
+          disabled={isLoading}
+        >
+          {/* MODIFICATO: Ripristino testo e icona di loading (Richiesta 1) */}
+          {isLoading ? (
+            <><i className="fas fa-spinner fa-spin"></i>Analizzo<span className="loading-dots"></span></>
+          ) : (
+            <><i className="fa-solid fa-wand-magic-sparkles"></i>Analizza</>
+          )}
+          {/* MODIFICATO: Aggiunta wave (Richiesta 1) */}
+          {isLoading && <span className="ai-wave-animation"></span>}
+        </button>
+      );
+    }
+    return null;
+  };
 
   return (
-    <div className="email-item" data-email-id={emailId} onClick={() => onSelect(emailId)}>
+    <div className={itemClasses} data-email-id={emailId} onClick={() => onSelect(emailId)}>
       <div className="email-item-content">
         <div className="email-item-main">
           <div className="email-sender">
@@ -32,25 +99,12 @@ function EmailItem({ emailId, email, onSelect }) {
         </div>
         <div className="email-item-aside">
           <div className="email-meta-info">
-            <span className="meta-item"><i className="fas fa-clock"></i>Oggi</span>
-            <div className="meta-item"><i className="fas fa-paperclip"></i> <span>{attachmentText}</span></div>
+            <span className="meta-item"><i className="fas fa-clock"></i>{formatEmailDate(email.date)}</span>
+             {attachmentCount > 0 && (<div className="meta-item"><i className="fas fa-paperclip"></i> <span>{attachmentText}</span></div>)}
+             {attachmentCount === 0 && (<div className="meta-item"><i className="fas fa-paperclip"></i> <span>Nessuno</span></div>)}
           </div>
-          {isUnread && email.attachments > 0 && ( // Mostra solo su alcuni
-            <button 
-              className="ai-button list-ai-button" 
-              onClick={handleAnalyze} 
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <i className="fas fa-spinner fa-spin"></i> Analizzando
-                  <span className="loading-dots"></span>
-                </>
-              ) : (
-                <><i className="fa-solid fa-wand-magic-sparkles"></i>Sintetizza</>
-              )}
-            </button>
-          )}
+          {/* MODIFICATO: Non mostrare il bottone se l'item è selezionato (per evitare confusione) (Richiesta 4) */}
+          {!isSelected && renderAsideAction()}
         </div>
       </div>
     </div>
@@ -76,18 +130,30 @@ function EmailListPanel() {
   // Filtra le email in base alla vista e allo stato
   const allEmails = Object.entries(state.emails);
   
+  // VISTA "DA PROTOCOLLARE"
   const pendingEmails = allEmails
-    .filter(([id, email]) => email.status === 'pending')
-    .sort(([idA], [idB]) => idA.startsWith('unread') ? -1 : 1); // unread in cima
+    .filter(([id, email]) => email.status === 'read' || email.status === 'unread' || email.status === 'analyzed');
     
+  // VISTA "PROTOCOLLATE"
   const processedEmails = allEmails
     .filter(([id, email]) => email.status === 'processed');
 
-  const emailsToShow = state.currentView === 'pending' ? pendingEmails : processedEmails;
-
   // Logica per "Da protocollare"
-  const unreadEmails = pendingEmails.filter(([id]) => id.startsWith('unread'));
-  const readEmails = pendingEmails.filter(([id]) => !id.startsWith('unread'));
+  
+  // MODIFICATO: Logica di filtro per lettura (Richiesta 4)
+  const unreadEmails = pendingEmails
+    .filter(([id, email]) => email.status === 'unread' || id === state.visuallyUnreadId) // Rimane qui se è "visualmente unread"
+    .sort(([idA, emailA], [idB, emailB]) => new Date(emailA.date) - new Date(emailB.date)); // Più vecchi in cima
+    
+  const readEmails = pendingEmails
+    .filter(([id, email]) => (email.status === 'read' || email.status === 'analyzed') && id !== state.visuallyUnreadId) // Escluso se è "visualmente unread"
+    .sort(([idA, emailA], [idB, emailB]) => {
+        // 'analyzed' prima di 'read'
+        if (emailA.status === 'analyzed' && emailB.status === 'read') return -1;
+        if (emailA.status === 'read' && emailB.status === 'analyzed') return 1;
+        // Altrimenti ordina per data (Vecchio -> Nuovo)
+        return new Date(emailA.date) - new Date(emailB.date);
+    });
 
   const pendingCount = pendingEmails.length;
   const processedCount = processedEmails.length;
@@ -133,12 +199,12 @@ function EmailListPanel() {
           <>
             {/* Sezione Non Lette */}
             <div id="unread-section">
-              <div className="list-section-header">
+              <div className="list-section-header" onClick={toggleUnread}>
                 <div className="list-header-content">
                   <h3 className="flex items-center">
-                    <div className="list-icon-bg"><i className="fas fa-envelope-open"></i></div> Non Lette ({unreadCount})
+                    <div className="list-icon-bg"><i className="fas fa-envelope"></i></div> Non Lette (<span>{unreadCount}</span>)
                   </h3>
-                  <button id="expand-unread" className="expand-unread-button" onClick={toggleUnread}>
+                  <button id="expand-unread" className="expand-unread-button">
                     <i 
                       className="fas fa-chevron-down transform transition-transform" 
                       style={{ transform: state.unreadExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
@@ -147,21 +213,33 @@ function EmailListPanel() {
                 </div>
               </div>
               
-              {!state.unreadExpanded ? (
+              {!state.unreadExpanded && unreadCount > 0 ? (
                  <div id="unread-preview" className="unread-preview">
                     {unreadEmails.slice(0, 3).map(([id, email]) => (
-                      <EmailItem key={id} emailId={id} email={email} onSelect={handleSelectEmail} />
+                        <EmailItem 
+                            key={id} 
+                            emailId={id} 
+                            email={email} 
+                            onSelect={handleSelectEmail} 
+                            isSelected={state.selectedEmailId === id}
+                        />
                     ))}
                     {unreadEmails.length > 3 && (
                       <div className="show-more-indicator" onClick={toggleUnread}>
-                        <i className="fas fa-chevron-down"></i> Mostra altre {unreadEmails.length - 3} non lette...
+                        <i className="fas fa-chevron-down"></i> Mostra altre {unreadEmails.length - 3}<i className="fas fa-chevron-down"></i>
                       </div>
                     )}
                  </div>
               ) : (
-                <div id="unread-emails">
+                <div id="unread-emails" style={{ display: state.unreadExpanded ? 'block' : 'none' }}>
                   {unreadEmails.map(([id, email]) => (
-                    <EmailItem key={id} emailId={id} email={email} onSelect={handleSelectEmail} />
+                    <EmailItem 
+                        key={id} 
+                        emailId={id} 
+                        email={email} 
+                        onSelect={handleSelectEmail} 
+                        isSelected={state.selectedEmailId === id}
+                    />
                   ))}
                 </div>
               )}
@@ -172,13 +250,19 @@ function EmailListPanel() {
               <div className="list-section-header">
                 <div className="list-header-content">
                   <h3 className="flex items-center">
-                    <div className="list-icon-bg"><i className="fas fa-envelope"></i></div> Lette ({readCount})
+                    <div className="list-icon-bg"><i className="fas fa-envelope-open"></i></div> Lette (<span>{readCount}</span>)
                   </h3>
                 </div>
               </div>
               <div id="email-list" className="email-list-container">
                 {readEmails.map(([id, email]) => (
-                  <EmailItem key={id} emailId={id} email={email} onSelect={handleSelectEmail} />
+                  <EmailItem 
+                    key={id} 
+                    emailId={id} 
+                    email={email} 
+                    onSelect={handleSelectEmail} 
+                    isSelected={state.selectedEmailId === id}
+                    />
                 ))}
               </div>
             </div>
@@ -187,8 +271,16 @@ function EmailListPanel() {
           /* Vista "Protocollate" */
           <div id="processed-section">
             <div id="email-list" className="email-list-container">
-              {processedEmails.map(([id, email]) => (
-                <EmailItem key={id} emailId={id} email={email} onSelect={handleSelectEmail} />
+              {processedEmails
+                .sort(([idA, emailA], [idB, emailB]) => new Date(emailA.date) - new Date(emailB.date)) // Più vecchi in cima
+                .map(([id, email]) => (
+                <EmailItem 
+                  key={id} 
+                  emailId={id} 
+                  email={email} 
+                  onSelect={handleSelectEmail} 
+                  isSelected={state.selectedEmailId === id}
+                />
               ))}
             </div>
           </div>

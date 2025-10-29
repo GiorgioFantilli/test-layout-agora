@@ -1,78 +1,200 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../AppContext';
-import ContactModal from './ContactModal'; // Creeremo questo file
+import ContactModal from './ContactModal'; 
+
+// --- Logica di Visualizzazione Allegati ---
+
+// Tipi di file supportati per l'analisi AI
+const SUPPORTED_FILE_TYPES = new Set([
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/jpg',
+  'application/docx', 
+]);
+
+const MOCK_ANALYSIS_TEXTS = {
+    'planimetria_locale.pdf': "Planimetria di locale C/1 di 85mq, conforme. Include 1 bagno (disabili) e 2 vetrine.",
+    'certificato_agibilita.pdf': "Certificato di agibilità n. 1234/2023. Rilasciato il 15/03/2023. Locale idoneo per attività commerciali.",
+    'documento_identita.jpg': "Carta d'identità (valida) di Mario Rossi, nato il 15/01/1980 a Roma. CF: RSSMRA80A15H501Z.",
+    'dichiarazione_inizio_attivita.docx': "Modulo SCIA (Dichiarazione Inizio Attività) compilato. Dati anagrafici e fiscali presenti. Manca firma digitale.",
+    'foto_locale_esterno.png': "Immagine facciata esterna con 2 vetrine e 1 ingresso. Insegna non presente.",
+    'visura_camerale.pdf': "Visura camerale ditta individuale 'Rossi Mario'. Iscritta il 01/01/2024. Stato: ATTIVA. Sede: Via Roma 123.",
+    'richiesta_residenza.pdf': "Modulo di richiesta certificato di residenza. Dati: Giulia Bianchi. Motivo: Pratiche INPS.",
+    'modulo_ztl.pdf': "Modulo richiesta ZTL compilato. Targa: AB123CD. Residente in Via Verdi.",
+    'libretto_auto.jpg': "Carta di circolazione veicolo targa AB123CD. Intestatario: Luca Verdi.",
+    'foto_buca_1.jpg': "Immagine di buca stradale. Dimensioni stimate: 50x70cm. Profondità: 10cm.",
+    'foto_buca_2.jpg': "Immagine di buca stradale. Dimensioni stimate: 60x60cm.",
+    'foto_panoramica.jpg': "Panoramica di Via Garibaldi 15. Si notano 3 buche.",
+    'mappa_via_garibaldi.png': "Mappa con indicazione del punto esatto della segnalazione.",
+    'atto_citazione.pdf': "Atto di citazione per mancato pagamento TARI 2023. Importo: 450,00 €.",
+    'procura_legale.pdf': "Procura speciale Avv. Greco per la causa Comune c/ Rossi.",
+    'SCIA_ViaVerdi.pdf': "SCIA per manutenzione straordinaria (rifacimento bagno e spostamento tramezzo).",
+    'Relazione_Tecnica_Asseverata.pdf': "Relazione asseverata Arch. Marino. Lavori conformi al Regolamento Edilizio.",
+    'Planimetria_Ante_Operam.pdf': "Stato di fatto: appartamento 70mq, 1 bagno, 2 camere.",
+    'Planimetria_Post_Operam.pdf': "Stato di progetto: 1 bagno, 2 camere, diversa distribuzione interna.",
+    'DURC_Impresa.pdf': "DURC regolare per 'EdilCostruzioni Srl', valido fino al 30/12/2025.",
+    'Ricevuta_Pagamento_TARI.pdf': "Quietanza di pagamento TARI 2024. Importo: 315,00 €. Pagamento valido.",
+    'CIL_Via_Napoli_5.pdf': "CIL asseverata per manutenzione straordinaria (spostamento tramezzi). Dati corretti.",
+    'Relazione_Tecnica.pdf': "Relazione tecnica asseverata dal Geom. Riva. Conforme.",
+};
+
+
+/**
+ * Funzione per separare la logica di visualizzazione (icone/colori)
+ * dai dati dell'allegato.
+ */
+function getAttachmentVisuals(fileType) {
+  if (!fileType) {
+    return { bgClass: 'file-icon-default', iClass: 'fas fa-file-alt' };
+  }
+
+  if (fileType.startsWith('image/')) {
+    return { bgClass: 'file-icon-image', iClass: 'fas fa-file-image' };
+  }
+  if (fileType === 'application/pdf') {
+    return { bgClass: 'file-icon-pdf', iClass: 'fas fa-file-pdf' };
+  }
+  if (fileType.includes('word')) {
+    return { bgClass: 'file-icon-doc', iClass: 'fas fa-file-word' };
+  }
+  if (fileType.includes('zip') || fileType.includes('archive')) {
+    return { bgClass: 'file-icon-default', iClass: 'fas fa-file-archive' };
+  }
+   if (fileType.includes('xml')) {
+    return { bgClass: 'file-icon-default', iClass: 'fas fa-file-code' };
+  }
+   if (fileType.includes('pkcs7-mime')) { // p7m
+    return { bgClass: 'file-icon-default', iClass: 'fas fa-file-signature' };
+  }
+  
+  // Default per .eml, .log, .dat, ecc. (Richiesta 9)
+  return { bgClass: 'file-icon-default', iClass: 'fas fa-file-alt' };
+}
+
+// Helper data per dettagli mittente
+function formatEmailDateTime(isoString) {
+  if (!isoString) return '';
+  const date = new Date(isoString);
+  return date.toLocaleDateString('it-IT', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
 
 // Sotto-componente per gestire le simulazioni di caricamento
-function AiButton({ onClick, initialText, loadingText, iconClass = "fa-solid fa-wand-magic-sparkles", timeout = 2000, onComplete, buttonType = "ai-button" }) {
+// MODIFICATO: Aggiunta wave (Richiesta 1) e testo "Completato" (Richiesta 2)
+function AiButton({ 
+    onClick, 
+    initialText, 
+    loadingText, 
+    iconClass = "fa-solid fa-wand-magic-sparkles", 
+    loadingIconClass = "fas fa-spinner fa-spin", // Icona di caricamento
+    timeout = 2000, 
+    onComplete, 
+    buttonType = "ai-button",
+    isExternallyLoading = false 
+}) {
   const [isLoading, setIsLoading] = useState(false);
   const [isDone, setIsDone] = useState(false);
+  
+  // Combina stato di caricamento interno ed esterno
+  const actualLoading = isLoading || isExternallyLoading;
+
+  useEffect(() => {
+    // Non resettare se è in caricamento esterno
+    if (!isExternallyLoading) {
+        setIsLoading(false);
+        setIsDone(false);
+    }
+  }, [initialText, isExternallyLoading]); 
 
   const handleClick = async () => {
     setIsLoading(true);
     if (onClick) {
-      await onClick(); // Attende la funzione esterna se fornita
+      const shouldProceed = await onClick(); // Ora onClick può essere async (Richiesta 2c)
+      if (shouldProceed === false) {
+          setIsLoading(false);
+          return;
+      }
     }
+    
+    // Simula il tempo di caricamento (timeout)
     setTimeout(() => {
       setIsLoading(false);
       setIsDone(true);
       if (onComplete) onComplete();
       
-      // Resetta il pulsante dopo un po'
+      // Resetta il bottone dopo 2 sec
       setTimeout(() => setIsDone(false), 2000); 
     }, timeout);
   };
 
+  // Classi dinamiche per lo stato di caricamento
+  const buttonClasses = [
+      buttonType,
+      actualLoading ? 'ai-loading' : '' // Usa stato combinato
+  ].filter(Boolean).join(' ');
+
   return (
-    <button className={buttonType} onClick={handleClick} disabled={isLoading || isDone}>
-      {isLoading ? (
-        <>
-          <i className="fas fa-spinner fa-spin"></i> {loadingText}
-          <span className="loading-dots"></span>
-        </>
-      ) : isDone ? (
-        <><i className="fas fa-check"></i> Fatto</>
+    <button className={buttonClasses} onClick={handleClick} disabled={actualLoading || isDone}>
+      {isDone ? (
+        <><i className="fas fa-check"></i> Completato</> // MODIFICATO: (Richiesta 2)
+      ) : actualLoading ? (
+        <><i className={loadingIconClass}></i> {loadingText}<span className="loading-dots"></span></>
       ) : (
         <><i className={iconClass}></i> {initialText}</>
       )}
+      {/* MODIFICATO: Aggiunta wave (Richiesta 1) */}
+      {actualLoading && <span className="ai-wave-animation"></span>}
     </button>
   );
 }
 
 // Sotto-componente per un singolo allegato
-function AttachmentItem({ filename, meta, icon, onAnalyze, children }) {
-  const [analysisResult, setAnalysisResult] = useState(null);
-
-  const handleAnalyze = () => {
-    // Simula l'analisi e ottiene un risultato fittizio
-    const results = { 
-      'planimetria_locale.pdf': 'Planimetria ok.', 
-      'certificato_agibilita.pdf': 'Agibilità valida.', 
-      'documento_identita.jpg': 'Documento ok.',
-      'dichiarazione_inizio_attivita.docx': 'Dichiarazione ok.'
-    };
-    const resultText = results[filename] || 'Analisi completata.';
-    
-    // Passa il risultato al genitore (per setAnalyzeDone) e lo imposta localmente
+function AttachmentItem({ attachment, onAnalyze, analysisResult, isExternallyLoading = false }) {
+  
+  const handleAnalysisComplete = () => {
     if (onAnalyze) onAnalyze(); 
-    setAnalysisResult(resultText);
   };
   
+  // Logica di visualizzazione
+  const isSupported = SUPPORTED_FILE_TYPES.has(attachment.fileType);
+  const visuals = getAttachmentVisuals(attachment.fileType);
+  
+  const fileTypeLabel = (attachment.fileType.split('/').pop() || 'file').toUpperCase();
+  const meta = `${fileTypeLabel} • ${attachment.sizeMB} MB`;
+
   return (
      <div className="attachment-item"> 
        <div className="attachment-content">
-          {children} {/* Per checkbox opzionale */}
-          <div className="file-icon-wrapper"><div className={`file-icon-bg ${icon.bgClass}`}><i className={icon.iClass}></i></div></div>
+          <div className="file-icon-wrapper"><div className={`file-icon-bg ${visuals.bgClass}`}><i className={visuals.iClass}></i></div></div>
+          
           <div className="attachment-details">
-            <p className="filename">{filename}</p> <p className="file-meta">{meta}</p>
-            <div className="attachment-actions">
-               <button className="link-button"> <i className="fas fa-eye"></i>Visualizza </button> 
-               <button className="link-button"> <i className="fas fa-download"></i>Scarica </button>
-               <AiButton
-                  onClick={handleAnalyze}
-                  initialText="Sintetizza"
-                  loadingText="Analizzo"
-                  timeout={1500}
-                />
+            <div className="attachment-main-line">
+              <div className="attachment-info">
+                <p className="filename" title={attachment.filename}>{attachment.filename}</p>
+                <p className="file-meta">{meta}</p>
+              </div>
+              <div className="attachment-actions">
+                 <button className="link-button"> <i className="fas fa-eye"></i><span className="button-text">Visualizza</span> </button> 
+                 <button className="link-button"> <i className="fas fa-download"></i><span className="button-text">Scarica</span> </button>
+                 
+                 {isSupported ? (
+                    <AiButton
+                      initialText="Sintetizza"
+                      loadingText="Analizzo"
+                      timeout={1500}
+                      onComplete={handleAnalysisComplete}
+                      isExternallyLoading={isExternallyLoading} 
+                    />
+                 ) : (
+                    <span className="unsupported-text"><i className="fas fa-times-circle"></i> Non supportato</span>
+                 )}
+              </div>
             </div>
             {analysisResult && (
               <div className="analysis-result ai-result-box">
@@ -97,65 +219,90 @@ function EmailDetailsPanel({ emailId, style }) {
     icon: 'fa-check-circle' 
   });
   
-  // Dati dell'email selezionata
-  const email = state.emails[emailId] || state.emails['unread1']; // Fallback
+  const email = state.emails[emailId] || Object.values(state.emails)[0]; 
+  const attachments = email.attachments || [];
   
-  // Lista fittizia di allegati basata sull'HTML
-  const attachments = [
-      { id: 'att1', filename: 'planimetria_locale.pdf', meta: 'PDF • 2.3 MB', icon: { bgClass: 'file-icon-pdf', iClass: 'fas fa-file-pdf' } },
-      { id: 'att2', filename: 'certificato_agibilita.pdf', meta: 'PDF • 1.8 MB', icon: { bgClass: 'file-icon-pdf', iClass: 'fas fa-file-pdf' } },
-      { id: 'att3', filename: 'documento_identita.jpg', meta: 'JPEG • 0.9 MB', icon: { bgClass: 'file-icon-image', iClass: 'fas fa-file-image' } },
-      { id: 'att4', filename: 'dichiarazione_inizio_attivita.docx', meta: 'DOCX • 0.1 MB', icon: { bgClass: 'file-icon-pdf', iClass: 'fas fa-file-word' } },
-      { id: 'att5', filename: 'foto_locale_esterno.png', meta: 'PNG • 1.1 MB', icon: { bgClass: 'file-icon-image', iClass: 'fas fa-file-image' } },
-      { id: 'att6', filename: 'visura_camerale.pdf', meta: 'PDF • 0.5 MB', icon: { bgClass: 'file-icon-pdf', iClass: 'fas fa-file-pdf' } },
-  ].slice(0, email.attachments); // Mostra solo il numero corretto di allegati
-  
-  const [checkedAttachments, setCheckedAttachments] = useState(
-    attachments.reduce((acc, att) => ({ ...acc, [att.id]: true }), {})
-  );
-  const [selectedDepartment, setSelectedDepartment] = useState(null);
+  const [selectedOffice, setSelectedOffice] = useState(null);
   const [aiSuggestionsLoading, setAiSuggestionsLoading] = useState(false);
   const [aiSuggestionsVisible, setAiSuggestionsVisible] = useState(false);
   const [protocolStatus, setProtocolStatus] = useState({ text: 'Conferma Protocollazione', icon: 'fa-clipboard-check', loading: false, error: false, success: false });
+
+  // Legge dallo stato globale (Richiesta 4)
+  const analysisResults = state.analysisResults[emailId] || {};
+
+  // Stato per caricamento "Sintetizza Tutti" (Richiesta 2)
+  const [isSynthesizingAll, setIsSynthesizingAll] = useState(false);
+
 
   // Resetta lo stato quando l'email cambia
   useEffect(() => {
     setCurrentStep(1);
     setSenderStatus({ text: 'Identificato automaticamente', className: 'text-success', icon: 'fa-check-circle' });
-    setCheckedAttachments(attachments.reduce((acc, att) => ({ ...acc, [att.id]: true }), {}));
-    setSelectedDepartment(null);
+    setSelectedOffice(null);
     setAiSuggestionsLoading(false);
-    setAiSuggestionsVisible(false);
-    setProtocolStatus({ text: 'Conferma Protocollazione', icon: 'fa-clipboard-check', loading: false, error: false, success: false });
-  }, [emailId, attachments.length]); // attachments.length per re-triggerare se cambia il numero
-  
-  const handleAttachmentCheck = (id) => {
-    setCheckedAttachments(prev => ({ ...prev, [id]: !prev[id] }));
-  };
-  
-  const toggleAllAttachments = (check) => {
-     setCheckedAttachments(attachments.reduce((acc, att) => ({ ...acc, [att.id]: check }), {}));
-  };
-  
-  const checkedCount = Object.values(checkedAttachments).filter(Boolean).length;
-
-  const handleGetAISuggestions = () => {
-    const hasChecked = Object.values(checkedAttachments).filter(Boolean).length > 0;
-    if (!hasChecked) {
-      alert("Seleziona almeno un allegato."); // Semplificato
-      return;
+    setIsSynthesizingAll(false);
+    
+    // Non resetta aiSuggestionsVisible se l'email è già analizzata
+    if (state.emails[emailId]?.status === 'analyzed') {
+        setAiSuggestionsVisible(true);
+    } else {
+        setAiSuggestionsVisible(false);
     }
-    setAiSuggestionsLoading(true);
-    setAiSuggestionsVisible(false);
-    setTimeout(() => {
-      setAiSuggestionsLoading(false);
-      setAiSuggestionsVisible(true);
-    }, 3000);
+    
+    setProtocolStatus({ text: 'Conferma Protocollazione', icon: 'fa-clipboard-check', loading: false, error: false, success: false });
+  }, [emailId, state.emails]); 
+  
+  
+  // Funzione helper per simulare attesa
+  const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+  // Logica per "Sintetizza tutti" (Richiesta 2)
+  const handleAnalyzeAll = async (timeout = 3000) => {
+    setIsSynthesizingAll(true);
+    
+    await wait(timeout); // Simula il tempo di analisi
+
+    const allResults = {};
+    attachments.forEach(att => {
+        if (SUPPORTED_FILE_TYPES.has(att.fileType)) {
+            allResults[att.id] = MOCK_ANALYSIS_TEXTS[att.filename] || 'Analisi completata: il documento è stato letto.';
+        }
+    });
+    
+    dispatch({
+        type: 'UPDATE_ANALYSIS_RESULTS',
+        payload: { emailId, results: allResults }
+    });
+    setIsSynthesizingAll(false);
+    return true; // Ritorna true per la dipendenza
+  };
+
+
+  // MODIFICATO: Logica "Genera Consigli" (Richiesta 2c)
+  const handleGetAISuggestions = async () => {
+    setAiSuggestionsLoading(true); // Avvia il loading del bottone "Genera Consigli"
+    
+    // Controlla se le sintesi sono già state fatte
+    const supportedAttachments = attachments.filter(att => SUPPORTED_FILE_TYPES.has(att.fileType));
+    const allSupportedAreDone = supportedAttachments.every(att => analysisResults[att.id]);
+    
+    if (!allSupportedAreDone) {
+        // Se non sono fatte, avvia "Sintetizza Tutti" e attendi il suo completamento
+        await handleAnalyzeAll(1500); // Usa un timeout più breve per la dipendenza
+    }
+    
+    // Simula l'aggiornamento dello stato dell'email a "analizzata"
+    dispatch({ type: 'MARK_AS_ANALYZED', payload: emailId });
+    
+    // Ritorna true per far partire l'animazione del bottone "Genera Consigli"
+    // (il timeout del bottone gestirà il setAiSuggestionsVisible)
+    return true; 
   };
   
+
   const handleProtocol = () => {
-    if (!selectedDepartment) {
-      setProtocolStatus({ text: 'Seleziona un reparto', icon: 'fa-exclamation-triangle', loading: false, error: true, success: false });
+    if (!selectedOffice) {
+      setProtocolStatus({ text: 'Seleziona un ufficio', icon: 'fa-exclamation-triangle', loading: false, error: true, success: false });
       setTimeout(() => setProtocolStatus(prev => ({...prev, text: 'Conferma Protocollazione', icon: 'fa-clipboard-check', error: false})), 2000);
       return;
     }
@@ -164,16 +311,13 @@ function EmailDetailsPanel({ emailId, style }) {
     
     setTimeout(() => {
       setProtocolStatus({ text: '✓ Email Protocollata', icon: 'fa-check', loading: false, error: false, success: true });
-      // Invia l'azione al contesto
       dispatch({ type: 'PROTOCOL_EMAIL', payload: emailId });
-      // Il reducer si occuperà di chiudere il pannello
     }, 2000);
   };
 
   const closePanel = () => dispatch({ type: 'CLOSE_EMAIL' });
   const toggleFullscreen = () => dispatch({ type: 'TOGGLE_FULLSCREEN' });
   
-  // Classi dinamiche per il pannello
   const panelClasses = [
     'details-panel',
     state.selectedEmailId ? 'slide-in' : 'slide-out',
@@ -220,23 +364,51 @@ function EmailDetailsPanel({ emailId, style }) {
       <div className="details-content-scroll scrollbar-styled">
         {/* --- STEP 1: Dettagli --- */}
         <div id="step1-content" className={currentStep === 1 ? '' : 'hidden'}>
-          <div style={{ marginBottom: '1.5rem' }}>
-            <h3 className="subheading"><i className="fas fa-user"></i>Mittente</h3>
-            <div className="info-box">
-              <div className="info-box-header">
-                <div>
-                  <p id="sender-name">{email.sender}</p>
-                  <p id="sender-email">{email.email}</p>
-                  <p id="sender-info" className={senderStatus.className}>
-                    <i className={`fas ${senderStatus.icon}`}></i>{senderStatus.text}
-                  </p>
+            <div className="details-top-section">
+            {/* Box Mittente */}
+            <div style={{width: "100%"}}>
+                <h3 className="subheading"><i className="fas fa-user"></i>Mittente</h3>
+                <div className="info-box">
+                    <div className="info-box-header">
+                        <div className="sender-info-block">
+                        <p id="sender-name">{email.sender}</p>
+                        <p id="sender-email">{email.email}</p>
+                        <p id="sender-info" className={senderStatus.className}>
+                            <i className={`fas ${senderStatus.icon}`}></i>{senderStatus.text}
+                        </p>
+                        </div>
+                        <button className="link-button" onClick={() => setIsModalOpen(true)} style={{marginTop: 'auto', marginBottom: 'auto'}}>
+                            <i className="fas fa-search"></i>Verifica contatto
+                        </button>
+                    </div>
                 </div>
-                <button className="link-button" onClick={() => setIsModalOpen(true)}>
-                  <i className="fas fa-search"></i>Verifica contatto
-                </button>
-              </div>
+            </div>
+            
+            {/* Box Date */}
+            <div style={{marginTop: "29px"}}>
+                <div className="date-details-section">
+                    <div className="date-detail-item">
+                        <i className="fas fa-calendar-alt date-icon received"></i>
+                        <div>
+                            <span className="date-label">Ricevuta</span>
+                            <span className="date-value">{formatEmailDateTime(email.date)}</span>
+                        </div>
+                    </div>
+                    {/* Mostra data lettura se esiste (impostata da Richiesta 4) */}
+                    {email.readDate && (
+                    <div className="date-detail-item">
+                        <i className="fas fa-eye date-icon read"></i>
+                        <div>
+                            <span className="date-label">Letta</span>
+                            <span className="date-value">{formatEmailDateTime(email.readDate)}</span>
+                        </div>
+                    </div>
+                    )}
+                </div>
             </div>
           </div>
+          
+          
           <div style={{ marginBottom: '1.5rem' }}>
             <h3 className="subheading"><i className="fas fa-tag"></i>Oggetto</h3>
             <p id="email-subject">{email.subject}</p>
@@ -248,7 +420,7 @@ function EmailDetailsPanel({ emailId, style }) {
             </div>
           </div>
           
-          {attachments.length > 0 && (
+          {attachments.length > 0 ? (
             <div className="attachments-section">
               <div className="attachments-header">
                 <h3><i className="fas fa-paperclip"></i>Allegati ({attachments.length})</h3>
@@ -257,19 +429,36 @@ function EmailDetailsPanel({ emailId, style }) {
                   initialText="Sintetizza tutti"
                   loadingText="Sintetizzo"
                   timeout={3000}
+                  onClick={() => handleAnalyzeAll(3000)} // Avvia la funzione
+                  isExternallyLoading={isSynthesizingAll} // Controllato dallo stato
+                  onComplete={() => {}} // L'onComplete è gestito dentro handleAnalyzeAll
                 />
               </div>
-              <div id="attachments-list" className="attachments-list scrollbar-styled">
+              <div id="attachments-list" className="attachments-list">
                 {attachments.map(att => (
                   <AttachmentItem 
                     key={att.id} 
-                    filename={att.filename} 
-                    meta={att.meta} 
-                    icon={att.icon}
+                    attachment={att} 
+                    analysisResult={analysisResults[att.id]} 
+                    isExternallyLoading={isSynthesizingAll} // Tutti i bottoni figli sono in loading (Richiesta 2)
+                    onAnalyze={() => { 
+                       const resultText = MOCK_ANALYSIS_TEXTS[att.filename] || 'Analisi completata: il documento è stato letto.';
+                       dispatch({
+                           type: 'UPDATE_ANALYSIS_RESULTS',
+                           payload: { emailId, results: { [att.id]: resultText } }
+                       });
+                    }}
                   />
                 ))}
               </div>
             </div>
+          ) : (
+             <div style={{ marginBottom: '1.5rem' }}>
+                <h3 className="subheading"><i className="fas fa-paperclip"></i>Allegati (0)</h3>
+                <div className="info-box">
+                  <p>Nessun allegato presente in questa email.</p>
+                </div>
+             </div>
           )}
           
           <div className="step-footer">
@@ -281,81 +470,93 @@ function EmailDetailsPanel({ emailId, style }) {
         
         {/* --- STEP 2: Protocollazione --- */}
         <div id="step2-content" className={currentStep === 2 ? '' : 'hidden'}>
-          <div className="attachments-section">
-            <div className="attachments-header">
-              <h3><i className="fas fa-paperclip"></i>Allegati da Protocollare (<span id="protocol-attachment-count">{checkedCount}</span><span>/{attachments.length}</span>)</h3>
-              <div className="attachment-toggles">
-                <button className="toggle-button-small" onClick={() => toggleAllAttachments(true)}> <i className="fas fa-check-double"></i>Seleziona tutti </button>
-                <button className="toggle-button-small" onClick={() => toggleAllAttachments(false)}> <i className="fas fa-times"></i>Deseleziona tutti </button>
+          {attachments.length > 0 ? (
+            <div className="attachments-section">
+              <div className="attachments-header">
+                <h3><i className="fas fa-paperclip"></i>Allegati da Protocollare ({attachments.length})</h3>
+              </div>
+              <div id="protocol-attachments-list" className="attachments-list scrollbar-styled">
+                 {attachments.map(att => (
+                    <AttachmentItem 
+                      key={att.id} 
+                      attachment={att} 
+                      analysisResult={analysisResults[att.id]} 
+                      isExternallyLoading={isSynthesizingAll}
+                      onAnalyze={() => {
+                         const resultText = MOCK_ANALYSIS_TEXTS[att.filename] || 'Analisi completata: il documento è stato letto.';
+                         dispatch({
+                             type: 'UPDATE_ANALYSIS_RESULTS',
+                             payload: { emailId, results: { [att.id]: resultText } }
+                         });
+                      }}
+                    />
+                  ))}
               </div>
             </div>
-            <div id="protocol-attachments-list" className="attachments-list scrollbar-styled">
-               {attachments.map(att => (
-                  <AttachmentItem 
-                    key={att.id} 
-                    filename={att.filename} 
-                    meta={att.meta} 
-                    icon={att.icon}
-                  >
-                    <input 
-                      type="checkbox" 
-                      id={`protocol-${att.id}`} 
-                      className="form-checkbox protocol-checkbox" 
-                      checked={checkedAttachments[att.id] || false}
-                      onChange={() => handleAttachmentCheck(att.id)}
-                    />
-                  </AttachmentItem>
-                ))}
+          ) : (
+            <div className="info-box" style={{marginBottom: '1.5rem'}}>
+              <p>Questa email non contiene allegati da protocollare.</p>
             </div>
-          </div>
+          )}
           
           <div id="department-selection-area">
             <div id="department-suggestions">
               <div className="department-suggestions-header">
-                <h3><i className="fa-solid fa-wand-magic-sparkles"></i>Reparti Consigliati</h3>
+                <h3><i className="fa-solid fa-wand-magic-sparkles"></i>Uffici Consigliati</h3>
+                {/* MODIFICATO: Bottone rimane visibile (Richiesta 2c) */}
                 <AiButton 
-                  initialText={aiSuggestionsVisible ? "Rigenera Consigli" : "Genera Consigli"}
-                  loadingText="Generando"
-                  timeout={3000}
-                  onClick={() => {
-                    setAiSuggestionsLoading(true);
-                    setAiSuggestionsVisible(false);
-                  }}
-                  onComplete={() => {
-                     setAiSuggestionsLoading(false);
-                     setAiSuggestionsVisible(true);
-                  }}
+                    initialText="Genera Consigli"
+                    loadingText="Generando"
+                    timeout={4000} // MODIFICATO: Durata maggiore (Richiesta 8)
+                    onClick={handleGetAISuggestions} // Logica con dipendenza (Richiesta 2c)
+                    isExternallyLoading={aiSuggestionsLoading} // Stato di loading
+                    onComplete={() => {
+                        setAiSuggestionsLoading(false);
+                        setAiSuggestionsVisible(true);
+                    }}
                 />
               </div>
               
+              {/* MODIFICATO: Banner informativo (Richiesta 9) */}
+              {!aiSuggestionsVisible && !aiSuggestionsLoading && (
+                <div className="ai-info-banner">
+                    <i className="fas fa-info-circle"></i>
+                    <p>Clicca "Genera Consigli" per avviare un'analisi AI. Il sistema leggerà il mittente, l'oggetto e le sintesi degli allegati per suggerire gli uffici di competenza.</p>
+                </div>
+              )}
+              
+              {/* MODIFICATO: Nuova animazione di loading (Richiesta 8) */}
               {aiSuggestionsLoading && (
                 <div id="ai-loading-section" className="ai-loading-box">
                    <div className="ai-loading-content">
-                     <div className="ai-loading-bar"></div>
+                     <div className="ai-pulse-animation">
+                        <i className="fas fa-brain"></i>
+                     </div>
                      <h4>Analisi AI in corso<span className="loading-dots"></span></h4>
+                     <p>Lettura email e sintesi allegati...</p>
                    </div>
                 </div>
               )}
               
               {aiSuggestionsVisible && (
                 <div className="suggestions-list">
-                   {/* Dati statici dall'HTML */}
-                   <label className="ai-suggestion-label"> <input type="radio" name="department" value="commercio" className="form-radio" onChange={e => setSelectedDepartment(e.target.value)} /> <div className="suggestion-details"> <div className="suggestion-header"> <span className="department-name">Ufficio Commercio e Attività Produttive</span> <span className="ai-badge ai-badge-green"> <i className="fa-solid fa-wand-magic-sparkles"></i>95%</span> </div> <p className="department-description">Competente per autorizzazioni commerciali...</p> </div> </label> 
-                   <label className="ai-suggestion-label"> <input type="radio" name="department" value="suap" className="form-radio" onChange={e => setSelectedDepartment(e.target.value)} /> <div className="suggestion-details"> <div className="suggestion-header"> <span className="department-name">SUAP - Sportello Unico Attività Produttive</span> <span className="ai-badge ai-badge-yellow"> <i className="fa-solid fa-wand-magic-sparkles"></i>85%</span> </div> <p className="department-description">Alternativa per pratiche integrate...</p> </div> </label> 
-                   <label className="ai-suggestion-label"> <input type="radio" name="department" value="urbanistica" className="form-radio" onChange={e => setSelectedDepartment(e.target.value)} /> <div className="suggestion-details"> <div className="suggestion-header"> <span className="department-name">Ufficio Urbanistica ed Edilizia</span> <span className="ai-badge ai-badge-blue"> <i className="fa-solid fa-wand-magic-sparkles"></i>72%</span> </div> <p className="department-description">Per verifica conformità urbanistica...</p> </div> </label> 
+                   <label className="ai-suggestion-label"> <input type="radio" name="department" value="commercio" className="form-radio" onChange={e => setSelectedOffice(e.target.value)} /> <div className="suggestion-details"> <div className="suggestion-header"> <span className="department-name">Ufficio Commercio e Attività Produttive</span> <span className="ai-badge ai-badge-green"> <i className="fa-solid fa-wand-magic-sparkles"></i>95%</span> </div> <p className="department-description">Competente per autorizzazioni commerciali...</p> </div> </label> 
+                   <label className="ai-suggestion-label"> <input type="radio" name="department" value="suap" className="form-radio" onChange={e => setSelectedOffice(e.target.value)} /> <div className="suggestion-details"> <div className="suggestion-header"> <span className="department-name">SUAP - Sportello Unico Attività Produttive</span> <span className="ai-badge ai-badge-yellow"> <i className="fa-solid fa-wand-magic-sparkles"></i>85%</span> </div> <p className="department-description">Alternativa per pratiche integrate...</p> </div> </label> 
+                   <label className="ai-suggestion-label"> <input type="radio" name="department" value="tributi" className="form-radio" onChange={e => setSelectedOffice(e.target.value)} /> <div className="suggestion-details"> <div className="suggestion-header"> <span className="department-name">Ufficio Tributi</span> <span className="ai-badge ai-badge-blue"> <i className="fa-solid fa-wand-magic-sparkles"></i>72%</span> </div> <p className="department-description">Per pagamenti TARI o imposte...</p> </div> </label> 
                 </div>
               )}
             </div>
             
             <div className="other-departments-section">
-              <h4><i className="fas fa-building"></i> Altri Reparti</h4>
-              <input type="text" placeholder="Cerca reparto..." className="form-input" />
-              <div className="department-listbox scrollbar-styled">
-                {/* Dati statici dall'HTML */}
-                 <label className="department-list-item"> <input type="radio" name="department" value="anagrafe" className="form-radio" onChange={e => setSelectedDepartment(e.target.value)} /> <span>Ufficio Anagrafe</span> </label> 
-                 <label className="department-list-item"> <input type="radio" name="department" value="tributi" className="form-radio" onChange={e => setSelectedDepartment(e.target.value)} /> <span>Ufficio Tributi</span> </label> 
-                 <label className="department-list-item"> <input type="radio" name="department" value="lavori-pubblici" className="form-radio" onChange={e => setSelectedDepartment(e.target.value)} /> <span>Ufficio Lavori Pubblici</span> </label> 
-                 <label className="department-list-item"> <input type="radio" name="department" value="protocollo" className="form-radio" onChange={e => setSelectedDepartment(e.target.value)} /> <span>Ufficio Protocollo</span> </label>
+              <h4><i className="fas fa-building"></i> Altri Uffici</h4>
+              <input type="text" placeholder="Cerca ufficio..." className="form-input" />
+              <div className="office-listbox scrollbar-styled">
+                 <label className="department-list-item"> <input type="radio" name="department" value="anagrafe" className="form-radio" onChange={e => setSelectedOffice(e.target.value)} /> <span>Ufficio Anagrafe</span> </label> 
+                 <label className="department-list-item"> <input type="radio" name="department" value="tributi-manuale" className="form-radio" onChange={e => setSelectedOffice(e.target.value)} /> <span>Ufficio Tributi</span> </label> 
+                 <label className="department-list-item"> <input type="radio" name="department" value="lavori-pubblici" className="form-radio" onChange={e => setSelectedOffice(e.target.value)} /> <span>Ufficio Lavori Pubblici</span> </label> 
+                 <label className="department-list-item"> <input type="radio" name="department" value="protocollo" className="form-radio" onChange={e => setSelectedOffice(e.target.value)} /> <span>Ufficio Protocollo</span> </label>
+                 <label className="department-list-item"> <input type="radio" name="department" value="urbanistica" className="form-radio" onChange={e => setSelectedOffice(e.target.value)} /> <span>Ufficio Urbanistica</span> </label>
+                 <label className="department-list-item"> <input type="radio" name="department" value="servizi-sociali" className="form-radio" onChange={e => setSelectedOffice(e.target.value)} /> <span>Servizi Sociali</span> </label>
               </div>
             </div>
           </div>

@@ -9,7 +9,9 @@ function MainContent() {
   // Stili dinamici per i pannelli
   const listPanelStyle = {
     width: state.selectedEmailId ? '33.333333%' : '100%',
-    opacity: state.selectedEmailId ? 1 : 1,
+    // MODIFICATO: Aggiunta logica opacità e visibilità per fullscreen (Richiesta 3)
+    opacity: state.isFullscreen ? 0 : 1,
+    visibility: state.isFullscreen ? 'hidden' : 'visible',
     overflow: state.selectedEmailId ? 'hidden' : 'visible' // Gestisce lo overflow
   };
 
