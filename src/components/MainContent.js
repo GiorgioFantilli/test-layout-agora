@@ -1,18 +1,16 @@
 import React from 'react';
 import { useAppContext } from '../AppContext';
-import EmailListPanel from './EmailListPanel';
-import EmailDetailsPanel from './EmailDetailsPanel';
+import EmailListPanel from './EmailList/EmailListPanel';
+import EmailDetailsPanel from './MainCard/EmailDetailsPanel';
 
 function MainContent() {
   const { state } = useAppContext();
   
-  // Stili dinamici per i pannelli
   const listPanelStyle = {
     width: state.selectedEmailId ? '33.333333%' : '100%',
-    // MODIFICATO: Aggiunta logica opacità e visibilità per fullscreen (Richiesta 3)
     opacity: state.isFullscreen ? 0 : 1,
     visibility: state.isFullscreen ? 'hidden' : 'visible',
-    overflow: state.selectedEmailId ? 'hidden' : 'visible' // Gestisce lo overflow
+    overflow: state.selectedEmailId ? 'hidden' : 'visible'
   };
 
   const detailsPanelStyle = {
@@ -29,7 +27,6 @@ function MainContent() {
         <EmailListPanel />
       </div>
       
-      {/* Il pannello dei dettagli viene montato/smontato in base alla selezione */}
       {state.selectedEmailId && (
         <EmailDetailsPanel 
           style={detailsPanelStyle} 
