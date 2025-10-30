@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import './style.css'; // Importa il tuo CSS
 import { AppProvider, useAppContext } from './AppContext';
-import Navbar from './components/Navbar';
+import Sidebar from './components/Sidebar'; // Import Sidebar instead of Navbar
 import MainContent from './components/MainContent';
 
 // Spostiamo qui la logica SDK
@@ -38,10 +38,12 @@ function AppContent() {
 
 
   return (
-    <>
-      <Navbar />
-      <MainContent />
-    </>
+    <div className="main-layout">
+      <Sidebar />
+      <div className="content-wrapper">
+        <MainContent />
+      </div>
+    </div>
   );
 }
 

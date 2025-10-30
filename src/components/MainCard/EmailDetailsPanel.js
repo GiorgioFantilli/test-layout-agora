@@ -145,7 +145,7 @@ function EmailDetailsPanel({ emailId, style }) {
       />
 
       <div className="details-header">
-        <h2><i className="fas fa-envelope-open-text"></i>Dettagli Email</h2>
+        <h2><i className="fas fa-envelope-open-text"></i></h2>
         <div className="tab-navigation-wrapper">
           <div className="sliding-pill-toggle sliding-pill-fullwidth">
             <input type="radio" name="step-toggle" id="pill-step-1" className="sliding-pill-input" checked={currentStep === 1} onChange={() => setCurrentStep(1)} />

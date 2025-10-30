@@ -6,15 +6,22 @@ import EmailDetailsPanel from './MainCard/EmailDetailsPanel';
 function MainContent() {
   const { state } = useAppContext();
   
+  const isDetailsOpen = !!state.selectedEmailId;
+  const isDetailsFullscreen = state.isFullscreen;
+
+  // Calculate widths based on 84% total width for main-content
+  const listWidth = (34 / 84) * 100;
+  const detailsWidth = (48 / 84) * 100;
+
   const listPanelStyle = {
-    width: state.selectedEmailId ? '33.333333%' : '100%',
-    opacity: state.isFullscreen ? 0 : 1,
-    visibility: state.isFullscreen ? 'hidden' : 'visible',
-    overflow: state.selectedEmailId ? 'hidden' : 'visible'
+    width: isDetailsFullscreen ? '0%' : (isDetailsOpen ? `${listWidth}%` : '100%'),
+    opacity: isDetailsFullscreen ? 0 : 1,
+    visibility: isDetailsFullscreen ? 'hidden' : 'visible',
+    overflow: 'hidden'
   };
 
   const detailsPanelStyle = {
-    width: state.isFullscreen ? '100%' : (state.selectedEmailId ? '66.666667%' : '0%'),
+    width: isDetailsFullscreen ? '100%' : (isDetailsOpen ? `${detailsWidth}%` : '0%'),
   };
 
   return (
