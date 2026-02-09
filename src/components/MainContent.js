@@ -10,8 +10,8 @@ function MainContent() {
   const isDetailsFullscreen = state.isFullscreen;
 
   // Calculate widths based on 84% total width for main-content
-  const listWidth = (34 / 84) * 100;
-  const detailsWidth = (48 / 84) * 100;
+  const listWidth = (32.5 / 81.5) * 100;
+  const detailsWidth = (47.5 / 81.5) * 100;
 
   const listPanelStyle = {
     width: isDetailsFullscreen ? '0%' : (isDetailsOpen ? `${listWidth}%` : '100%'),
@@ -24,11 +24,17 @@ function MainContent() {
     width: isDetailsFullscreen ? '100%' : (isDetailsOpen ? `${detailsWidth}%` : '0%'),
   };
 
+  const listPanelClasses = [
+    isDetailsFullscreen 
+      ? 'panel-collapsing flex-1 flex flex-col panel-transition overflow-hidden' 
+      : 'flex-1 flex flex-col panel-transition overflow-hidden'
+  ].filter(Boolean).join(' ');
+
   return (
     <div className="main-content">
       <div 
         id="email-list-panel" 
-        className="flex-1 flex flex-col panel-transition overflow-hidden" 
+        className={listPanelClasses}
         style={listPanelStyle}
       >
         <EmailListPanel />

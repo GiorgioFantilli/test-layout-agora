@@ -2,7 +2,7 @@ import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { emailData } from './data/mockData';
 
 // Configuration object
-const defaultConfig = { app_title: "Sistema Protocollo PEC", comune_name: "Comune di Roma" };
+const defaultConfig = { app_title: "Sistema Protocollo", comune_name: "Comune di Roma" };
 
 // Initial state
 const initialState = {
@@ -77,14 +77,21 @@ function appReducer(state, action) {
 
         case 'UPDATE_ANALYSIS_RESULTS':
             const { emailId, results } = action.payload;
+            const newEmailResults = { ...(state.analysisResults[emailId] || {}) };
+            
+            Object.keys(results).forEach(key => {
+                if (results[key] === null) {
+                    delete newEmailResults[key];
+                } else {
+                    newEmailResults[key] = results[key];
+                }
+            });
+
             return {
                 ...state,
                 analysisResults: {
                     ...state.analysisResults,
-                    [emailId]: {
-                        ...(state.analysisResults[emailId] || {}),
-                        ...results,
-                    },
+                    [emailId]: newEmailResults,
                 },
             };
 
@@ -93,7 +100,6 @@ function appReducer(state, action) {
     }
 }
 
-// Create context
 const AppContext = createContext();
 
 // Provider Component

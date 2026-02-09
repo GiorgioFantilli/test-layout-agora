@@ -5,10 +5,6 @@ import EmailItem from './EmailItem';
 function EmailListPanel() {
   const { state, dispatch } = useAppContext();
 
-  const handleViewChange = (view) => {
-    dispatch({ type: 'SWITCH_VIEW', payload: view });
-  };
-
   const handleSelectEmail = (emailId) => {
     dispatch({ type: 'SELECT_EMAIL', payload: emailId });
   };
@@ -37,49 +33,24 @@ function EmailListPanel() {
     .filter(([id, email]) => (email.status === 'read' || email.status === 'analyzed') && id !== state.visuallyUnreadId)
     .sort(([idA, emailA], [idB, emailB]) => new Date(emailA.date) - new Date(emailB.date));
 
-  const pendingCount = pendingEmails.length;
-  const processedCount = processedEmails.length;
+
   const unreadCount = unreadEmails.length;
   const readCount = readEmails.length;
 
+  const subheadText = state.currentView === 'pending' ? 'Da Protocollare' : 'Protocollate';
+
   return (
     <>
-      {/* Filter Bar */}
-      <div className="filter-bar flex-shrink-0">
-        <div className="filter-bar-header">
-          <div className="sliding-pill-toggle">
-            <input
-              type="radio"
-              name="view-toggle"
-              id="pill-input-1"
-              className="sliding-pill-input"
-              checked={state.currentView === 'pending'}
-              onChange={() => handleViewChange('pending')}
-            />
-            <label htmlFor="pill-input-1" className="sliding-pill-label" id="filter-pending-label">
-              <i className="fas fa-clock"></i>Da Protocollare <span className="pill-badge">{pendingCount}</span>
-            </label>
-            <input
-              type="radio"
-              name="view-toggle"
-              id="pill-input-2"
-              className="sliding-pill-input"
-              checked={state.currentView === 'processed'}
-              onChange={() => handleViewChange('processed')}
-            />
-            <label htmlFor="pill-input-2" className="sliding-pill-label" id="filter-processed-label">
-              <i className="fas fa-check"></i>Protocollate <span className="pill-badge">{processedCount}</span>
-            </label>
-            <div className="sliding-pill-bg"></div>
-          </div>
-        </div>
-      </div>
-
       {/* Email List Scroll Area */}
       <div 
         key={state.currentView} 
         className="email-list-scroll-area scrollbar-styled content-fade-in"
       >
+        <div className="list-main-header">
+          <h2 className="list-main-title">Posta in arrivo</h2>
+          <span className="list-main-subhead">{subheadText}</span>
+        </div>
+        
         {state.currentView === 'pending' ? (
           <>
             {/* Unread Section */}

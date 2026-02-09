@@ -7,17 +7,56 @@ import { SUPPORTED_FILE_TYPES } from '../../utils/uiUtils';
 import { MOCK_ANALYSIS_TEXTS } from '../../data/mockData';
 
 // Helper function
-const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const randomWait = (minMs, maxMs) => {
+  const duration = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
+  return new Promise(resolve => setTimeout(resolve, duration));
+};
 
 function EmailDetailsPanel({ emailId, style }) {
   const { state, dispatch } = useAppContext();
   const [currentStep, setCurrentStep] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [senderStatus, setSenderStatus] = useState({
-    text: 'Identificato automaticamente',
-    className: 'text-success',
-    icon: 'fa-check-circle'
-  });
+  
+  const [senderStatus, setSenderStatus] = useState({ text: '', className: '', icon: '' });
+
+  useEffect(() => {
+    // Simulo stati diversi in base all'ID o al mittente per demo
+    const mockStatus = (() => {
+        if (emailId === 'unread2') return { 
+            text: 'Conflitto contatti', 
+            className: 'status-warning', 
+            icon: 'fa-exclamation-triangle',
+            actionText: 'Risolvi' 
+        };
+        if (emailId === 'unread3') return { 
+            text: 'Non identificato', 
+            className: 'status-danger', 
+            icon: 'fa-question-circle',
+            actionText: 'Crea'
+        };
+        if (emailId === 'unread4') return { 
+            text: 'Identificato manualmente', 
+            className: 'status-info', 
+            icon: 'fa-user-edit',
+            actionText: 'Modifica' 
+        };
+        return { 
+            text: 'Identificato automaticamente', 
+            className: 'status-success', 
+            icon: 'fa-check-circle',
+            actionText: 'Verifica'
+        };
+    })();
+
+    setSenderStatus(mockStatus);
+    
+    setCurrentStep(1);
+    setSelectedOffice(null);
+    setAiSuggestionsLoading(false);
+    setIsSynthesizingAll(false);
+    setProtocolStatus({ text: 'Conferma Protocollazione', icon: 'fa-clipboard-check', loading: false, error: false, success: false });
+    setAiSuggestionsVisible(false); 
+  }, [emailId]);
 
   const email = state.emails[emailId] || Object.values(state.emails)[0];
   const attachments = email.attachments || [];
@@ -30,33 +69,34 @@ function EmailDetailsPanel({ emailId, style }) {
   
   const analysisResults = state.analysisResults[emailId] || {};
 
-
-  // Reset local state when emailId changes
-  useEffect(() => {
-    setCurrentStep(1);
-    setSenderStatus({ text: 'Identificato automaticamente', className: 'text-success', icon: 'fa-check-circle' });
-    setSelectedOffice(null);
-    setAiSuggestionsLoading(false);
-    setIsSynthesizingAll(false);
-    setProtocolStatus({ text: 'Conferma Protocollazione', icon: 'fa-clipboard-check', loading: false, error: false, success: false });
-    setAiSuggestionsVisible(false); 
-  }, [emailId]);
-
-  // ESLint fix: Extract complex expression and add dependencies
   const currentEmailStatus = state.emails[emailId]?.status;
   useEffect(() => {
-    if (currentEmailStatus === 'analyzed') {
-        setAiSuggestionsVisible(true);
-    } else {
-        setAiSuggestionsVisible(false);
+    if (!aiSuggestionsLoading) { 
+      if (currentEmailStatus === 'analyzed') {
+          setAiSuggestionsVisible(true);
+      } else {
+          setAiSuggestionsVisible(false);
+      }
     }
-  }, [emailId, currentEmailStatus, state.emails]);
+  }, [emailId, currentEmailStatus, state.emails, aiSuggestionsLoading]);
 
 
   // "Analyze All" logic
-  const handleAnalyzeAll = async (timeout = 3000) => {
+  const handleAnalyzeAll = async () => {
     setIsSynthesizingAll(true);
-    await wait(timeout);
+
+    const clearedResults = {};
+    attachments.forEach(att => {
+      if (SUPPORTED_FILE_TYPES.has(att.fileType)) {
+        clearedResults[att.id] = null; 
+      }
+    });
+    dispatch({
+        type: 'UPDATE_ANALYSIS_RESULTS',
+        payload: { emailId, results: clearedResults }
+    });
+
+    await randomWait(2000, 4500);
 
     const allResults = {};
     attachments.forEach(att => {
@@ -73,8 +113,15 @@ function EmailDetailsPanel({ emailId, style }) {
     return true;
   };
 
-  // Logic for single attachment analysis (passed down as prop)
-  const handleAttachmentAnalyze = (attachmentId, filename) => {
+  // Logic for single attachment analysis
+  const handleAttachmentAnalyze = async (attachmentId, filename) => {
+      dispatch({
+          type: 'UPDATE_ANALYSIS_RESULTS',
+          payload: { emailId, results: { [attachmentId]: null } }
+      });
+      
+      await randomWait(800, 2000);
+
       const resultText = MOCK_ANALYSIS_TEXTS[filename] || 'Analisi completata: il documento è stato letto.';
       dispatch({
           type: 'UPDATE_ANALYSIS_RESULTS',
@@ -90,12 +137,12 @@ function EmailDetailsPanel({ emailId, style }) {
     const allSupportedAreDone = supportedAttachments.every(att => analysisResults[att.id]);
 
     if (!allSupportedAreDone) {
-        await handleAnalyzeAll(1500);
+        await handleAnalyzeAll();
     }
 
     dispatch({ type: 'MARK_AS_ANALYZED', payload: emailId });
     
-    await wait(2500);
+    await randomWait(1500, 5000);
     
     setAiSuggestionsLoading(false);
     setAiSuggestionsVisible(true);
@@ -104,7 +151,7 @@ function EmailDetailsPanel({ emailId, style }) {
   };
 
 
-  const handleProtocol = () => {
+  const handleProtocol = async () => {
     if (!selectedOffice) {
       setProtocolStatus({ text: 'Seleziona un ufficio', icon: 'fa-exclamation-triangle', loading: false, error: true, success: false });
       setTimeout(() => setProtocolStatus(prev => ({...prev, text: 'Conferma Protocollazione', icon: 'fa-clipboard-check', error: false})), 2000);
@@ -113,10 +160,10 @@ function EmailDetailsPanel({ emailId, style }) {
 
     setProtocolStatus({ text: 'Protocollazione in corso...', icon: 'fa-spinner fa-spin', loading: true, error: false, success: false });
 
-    setTimeout(() => {
-      setProtocolStatus({ text: '✓ Email Protocollata', icon: 'fa-check', loading: false, error: false, success: true });
-      dispatch({ type: 'PROTOCOL_EMAIL', payload: emailId });
-    }, 2000);
+    await randomWait(1000, 2500); 
+
+    setProtocolStatus({ text: '✓ Email Protocollata', icon: 'fa-check', loading: false, error: false, success: true });
+    dispatch({ type: 'PROTOCOL_EMAIL', payload: emailId });
   };
 
   const closePanel = () => dispatch({ type: 'CLOSE_EMAIL' });
@@ -178,7 +225,7 @@ function EmailDetailsPanel({ emailId, style }) {
               onVerifyContactClick={() => setIsModalOpen(true)}
               analysisResults={analysisResults}
               isSynthesizingAll={isSynthesizingAll}
-              onAnalyzeAll={() => handleAnalyzeAll(3000)}
+              onAnalyzeAll={() => handleAnalyzeAll()}
               onAttachmentAnalyze={handleAttachmentAnalyze}
               onGoToProtocol={() => setCurrentStep(2)}
             />

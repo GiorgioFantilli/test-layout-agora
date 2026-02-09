@@ -15,74 +15,85 @@ function DetailsAttachmentsTab({
     onGoToProtocol
 }) {
 
+  const getInitials = (name) => {
+      if (!name) return '?';
+      return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+  };
+
   return (
     <div id="step1-content">
-        <div className="details-top-section">
-        {/* Sender Box */}
-        <div style={{width: "100%"}}>
-            <h3 className="subheading"><i className="fas fa-user"></i>Mittente</h3>
-            <div className="info-box">
-                <div className="info-box-header">
-                    <div className="sender-info-block">
-                    <p id="sender-name">{email.sender}</p>
-                    <p id="sender-email">{email.email}</p>
-                    <p id="sender-info" className={senderStatus.className}>
-                        <i className={`fas ${senderStatus.icon}`}></i>{senderStatus.text}
-                    </p>
-                    </div>
-                    <button className="link-button" onClick={onVerifyContactClick} style={{marginTop: 'auto', marginBottom: 'auto'}}>
-                        <i className="fas fa-search"></i>Verifica contatto
-                    </button>
-                </div>
-            </div>
-        </div>
 
-        {/* Date Box */}
-        <div style={{marginTop: "29px"}}>
-            <div className="date-details-section">
-                <div className="date-detail-item">
-                    <i className="fas fa-calendar-alt date-icon received"></i>
-                    <div>
-                        <span className="date-label">Ricevuta</span>
-                        <span className="date-value">{formatEmailDateTime(email.date)}</span>
-                    </div>
-                </div>
-                {email.readDate && (
-                <div className="date-detail-item">
-                    <i className="fas fa-eye date-icon read"></i>
-                    <div>
-                        <span className="date-label">Letta</span>
-                        <span className="date-value">{formatEmailDateTime(email.readDate)}</span>
-                    </div>
-                </div>
-                )}
-            </div>
-        </div>
+      {/* Header: Avatar + Info Verticale */}
+      <div className="email-header-grid">
+          <div className="sender-avatar-large">
+              {getInitials(email.sender)}
+          </div>
+          
+          <div className="email-meta-content">
+              <div className="sender-recipient-box">
+                  <div className="sender-name-large">
+                      {email.sender}
+                  </div>
+                  <div className="sender-email-row">
+                      {email.email}
+                  </div>
+                  <div className="sender-status-row">
+                      <button 
+                          className={`contact-status-badge ${senderStatus.className}`} 
+                          onClick={onVerifyContactClick}
+                          title="Clicca per gestire lo stato del contatto"
+                      >
+                          <i className={`fas ${senderStatus.icon}`}></i>
+                          <span className="status-text">{senderStatus.text}</span>
+                      </button>
+                  </div>
+                  <div className="address-pill">
+                      <span className="label">A:</span>
+                      <span className="value">{email.recipient || 'ufficio.protocollo@pec.comune.it'}</span>
+                  </div>
+              </div>
+
+              {/* Date */}
+              <div className="email-dates-compact">
+                  <div className="date-row" title="Ricevuta">
+                      <i className="fas fa-calendar-alt"></i> {formatEmailDateTime(email.date)}
+                  </div>
+                  {email.readDate && (
+                      <div className="date-row" title="Letta" style={{color: 'var(--c-success)'}}>
+                          <i className="fas fa-check-double"></i> {formatEmailDateTime(email.readDate)}
+                      </div>
+                  )}
+              </div>
+          </div>
       </div>
 
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h3 className="subheading"><i className="fas fa-tag"></i>Oggetto</h3>
-        <p id="email-subject">{email.subject}</p>
+      {/* Oggetto */}
+      <div className="email-subject-container">
+          {/* <div className="subject-icon-modern">
+              <i className="fas fa-tag"></i>
+          </div> */}
+          <h1 className="email-subject-large">
+              {email.subject}
+          </h1>
       </div>
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h3 className="subheading"><i className="fas fa-align-left"></i>Corpo del messaggio</h3>
-        <div className="info-box">
-          <p id="email-body">{email.body}</p>
-        </div>
+
+      {/* Corpo del Messaggio */}
+      <div className="message-body-card">
+          <div className="email-body-content">
+              {email.body}
+          </div>
       </div>
 
       {attachments.length > 0 ? (
         <div className="attachments-section">
           <div className="attachments-header">
-            <h3><i className="fas fa-paperclip"></i>Allegati ({attachments.length})</h3>
+            <h3><i className="fas fa-paperclip"></i>{attachments.length} Allegat{attachments.length === 1 ? 'o' : 'i'}</h3>
             <AiButton
               buttonType="ai-button-large"
               initialText="Sintetizza tutti"
               loadingText="Sintetizzo"
-              timeout={3000}
               onClick={onAnalyzeAll}
-              isExternallyLoading={isSynthesizingAll}
-              onComplete={() => {}}
+              isLoading={isSynthesizingAll}
             />
           </div>
           <div id="attachments-list" className="attachments-list">

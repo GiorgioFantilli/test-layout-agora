@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAppContext } from '../../AppContext';
-import { formatEmailDate } from '../../utils/dateUtils';
+import { formatEmailDateTime } from '../../utils/dateUtils';
 
 function EmailItem({ emailId, email, onSelect, isSelected }) {
   const { dispatch } = useAppContext();
@@ -15,7 +15,10 @@ function EmailItem({ emailId, email, onSelect, isSelected }) {
     }, 2000);
   };
 
-  const bodyPreview = (email.body.split('\n')[0] || '').substring(0, 100) + (email.body.length > 100 ? '...' : '');
+  const cleanBody = email.body.replace(/\n/g, ' ');
+  const bodyPreview = cleanBody.length > 300 
+      ? cleanBody.substring(0, 300) + '...' 
+      : cleanBody;
   const attachmentCount = email.attachments ? email.attachments.length : 0;
   const attachmentText = `${attachmentCount} allegat${attachmentCount === 1 ? 'o' : 'i'}`;
 
@@ -66,12 +69,22 @@ function EmailItem({ emailId, email, onSelect, isSelected }) {
           <p className="email-body-preview">{bodyPreview}</p>
         </div>
         <div className="email-item-aside">
-          <div className="email-meta-info">
-            <span className="meta-item"><i className="fas fa-clock"></i>{formatEmailDate(email.date)}</span>
-             {attachmentCount > 0 && (<div className="meta-item"><i className="fas fa-paperclip"></i> <span>{attachmentText}</span></div>)}
-             {attachmentCount === 0 && (<div className="meta-item"><i className="fas fa-paperclip"></i> <span>Nessuno</span></div>)}
+          {/* 1. Data e Ora */}
+          <span className="meta-item date-item">
+            <i className="fas fa-clock"></i>
+            {formatEmailDateTime(email.date)}
+          </span>
+
+          {/* 2. Allegati */}
+          <span className="meta-item attachment-item">
+             <i className="fas fa-paperclip"></i> 
+             {attachmentCount > 0 ? attachmentText : 'Nessuno'}
+          </span>
+
+          {/* 3. Pulsante/Badge */}
+          <div className="aside-action-wrapper">
+            {renderAsideAction()}
           </div>
-          {renderAsideAction()}
         </div>
       </div>
     </div>
