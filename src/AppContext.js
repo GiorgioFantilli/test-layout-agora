@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import { emailData } from './data/mockData';
 
 // Configuration object
 const defaultConfig = { app_title: "Sistema Protocollo", comune_name: "Comune di Roma" };
@@ -11,7 +10,7 @@ const initialState = {
     visuallyUnreadId: null,
     isFullscreen: false,
     unreadExpanded: false,
-    emails: emailData,
+    emails: {},
     config: defaultConfig,
     theme: localStorage.getItem('theme') || 'light',
     analysisResults: {},
@@ -69,16 +68,16 @@ function appReducer(state, action) {
         case 'UPDATE_CONFIG':
             return { ...state, config: { ...state.config, ...action.payload } };
         case 'MARK_AS_ANALYZED':
-             const newEmailsOnAnalyze = { ...state.emails };
+            const newEmailsOnAnalyze = { ...state.emails };
             if (newEmailsOnAnalyze[action.payload] && (newEmailsOnAnalyze[action.payload].status === 'read' || newEmailsOnAnalyze[action.payload].status === 'unread')) {
                 newEmailsOnAnalyze[action.payload].status = 'analyzed';
             }
-            return {...state, emails: newEmailsOnAnalyze};
+            return { ...state, emails: newEmailsOnAnalyze };
 
         case 'UPDATE_ANALYSIS_RESULTS':
             const { emailId, results } = action.payload;
             const newEmailResults = { ...(state.analysisResults[emailId] || {}) };
-            
+
             Object.keys(results).forEach(key => {
                 if (results[key] === null) {
                     delete newEmailResults[key];
@@ -93,6 +92,35 @@ function appReducer(state, action) {
                     ...state.analysisResults,
                     [emailId]: newEmailResults,
                 },
+            };
+
+        case 'SET_EMAILS':
+            return {
+                ...state,
+                emails: action.payload,
+            };
+
+        case 'APPEND_EMAILS':
+            return {
+                ...state,
+                emails: {
+                    ...state.emails,
+                    ...action.payload
+                }
+            };
+
+        case 'UPDATE_EMAIL_BODY':
+            const { messageId, bodyText } = action.payload;
+            if (!state.emails[messageId]) return state;
+            return {
+                ...state,
+                emails: {
+                    ...state.emails,
+                    [messageId]: {
+                        ...state.emails[messageId],
+                        body: bodyText
+                    }
+                }
             };
 
         default:

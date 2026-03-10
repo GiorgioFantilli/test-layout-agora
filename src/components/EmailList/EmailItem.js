@@ -1,21 +1,50 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../../AppContext';
 import { formatEmailDateTime } from '../../utils/dateUtils';
+import { fetchParsedMessage } from '../../services/api';
 
 function EmailItem({ emailId, email, onSelect, isSelected }) {
   const { dispatch } = useAppContext();
   const [isLoading, setIsLoading] = useState(false);
+  const isMounted = useRef(true);
 
-  const handleAnalyze = (e) => {
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
+  const handleAnalyze = async (e) => {
     e.stopPropagation();
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      dispatch({ type: 'MARK_AS_ANALYZED', payload: emailId });
-    }, 2000);
+    
+    try {
+        const controller = new AbortController();
+        const parsed = await fetchParsedMessage(emailId, controller.signal);
+        
+        if (isMounted.current) {
+            if (parsed && parsed.body_text) {
+                dispatch({ 
+                    type: 'UPDATE_EMAIL_BODY', 
+                    payload: { messageId: emailId, bodyText: parsed.body_text } 
+                });
+            }
+            dispatch({ type: 'MARK_AS_ANALYZED', payload: emailId });
+        }
+    } catch (err) {
+        console.error("Analysis failed", err);
+        // Fallback or marking it anyways for UI flow if backend isn't perfect yet
+        if (isMounted.current) {
+            dispatch({ type: 'MARK_AS_ANALYZED', payload: emailId });
+        }
+    } finally {
+        if (isMounted.current) {
+            setIsLoading(false);
+        }
+    }
   };
 
-  const cleanBody = email.body.replace(/\n/g, ' ');
+  const cleanBody = (email.body || '').replace(/\n/g, ' ');
   const bodyPreview = cleanBody.length > 300 
       ? cleanBody.substring(0, 300) + '...' 
       : cleanBody;
