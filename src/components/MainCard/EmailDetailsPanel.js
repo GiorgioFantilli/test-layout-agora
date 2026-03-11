@@ -1,10 +1,26 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useAppContext } from '../../AppContext';
-import ContactModal from './ContactModal';
-import DetailsAttachmentsTab from './DetailsAttachmentsTab';
-import ProtocolTab from './ProtocolTab';
-import { SUPPORTED_FILE_TYPES } from '../../utils/uiUtils';
-import { fetchParsedMessage } from '../../services/api';
+import React, { useState, useEffect, useRef } from "react";
+import { useAppContext } from "../../AppContext";
+import ContactModal from "./ContactModal";
+import DetailsAttachmentsTab from "./DetailsAttachmentsTab";
+import ProtocolTab from "./ProtocolTab";
+import { SUPPORTED_FILE_TYPES } from "../../utils/uiUtils";
+import { MOCK_ANALYSIS_TEXTS } from "../../data/mockData";
+import { fetchParsedMessage, fetchMessageDetails } from "../../services/api";
+
+// Safe helper per unmount e memory leaks
+const abortableWait = (ms, signal) => {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      resolve();
+    }, ms);
+    if (signal) {
+      signal.addEventListener("abort", () => {
+        clearTimeout(timer);
+        reject(new DOMException("Aborted", "AbortError"));
+      });
+    }
+  });
+};
 
 function EmailDetailsPanel({ emailId, style }) {
   const { state, dispatch } = useAppContext();
@@ -16,6 +32,9 @@ function EmailDetailsPanel({ emailId, style }) {
 
   useEffect(() => {
     isMounted.current = true;
+    if (activeRequests.current.signal.aborted) {
+      activeRequests.current = new AbortController();
+    }
     const currentRequests = activeRequests.current;
     return () => {
       isMounted.current = false;
@@ -23,34 +42,41 @@ function EmailDetailsPanel({ emailId, style }) {
     };
   }, []);
 
-  const [senderStatus, setSenderStatus] = useState({ text: '', className: '', icon: '' });
+  const [senderStatus, setSenderStatus] = useState({
+    text: "",
+    className: "",
+    icon: "",
+  });
 
   useEffect(() => {
     // Simulo stati diversi in base all'ID o al mittente per demo
     const mockStatus = (() => {
-      if (emailId === 'unread2') return {
-        text: 'Conflitto contatti',
-        className: 'status-warning',
-        icon: 'fa-exclamation-triangle',
-        actionText: 'Risolvi'
-      };
-      if (emailId === 'unread3') return {
-        text: 'Non identificato',
-        className: 'status-danger',
-        icon: 'fa-question-circle',
-        actionText: 'Crea'
-      };
-      if (emailId === 'unread4') return {
-        text: 'Identificato manualmente',
-        className: 'status-info',
-        icon: 'fa-user-edit',
-        actionText: 'Modifica'
-      };
+      if (emailId === "unread2")
+        return {
+          text: "Conflitto contatti",
+          className: "status-warning",
+          icon: "fa-exclamation-triangle",
+          actionText: "Risolvi",
+        };
+      if (emailId === "unread3")
+        return {
+          text: "Non identificato",
+          className: "status-danger",
+          icon: "fa-question-circle",
+          actionText: "Crea",
+        };
+      if (emailId === "unread4")
+        return {
+          text: "Identificato manualmente",
+          className: "status-info",
+          icon: "fa-user-edit",
+          actionText: "Modifica",
+        };
       return {
-        text: 'Identificato automaticamente',
-        className: 'status-success',
-        icon: 'fa-check-circle',
-        actionText: 'Verifica'
+        text: "Identificato automaticamente",
+        className: "status-success",
+        icon: "fa-check-circle",
+        actionText: "Verifica",
       };
     })();
 
@@ -60,63 +86,69 @@ function EmailDetailsPanel({ emailId, style }) {
     setSelectedOffice(null);
     setAiSuggestionsLoading(false);
     setIsSynthesizingAll(false);
-    setProtocolStatus({ text: 'Conferma Protocollazione', icon: 'fa-clipboard-check', loading: false, error: false, success: false });
+    setProtocolStatus({
+      text: "Conferma Protocollazione",
+      icon: "fa-clipboard-check",
+      loading: false,
+      error: false,
+      success: false,
+    });
     setAiSuggestionsVisible(false);
 
-    const loadParsedData = async () => {
-      try {
-        const parsed = await fetchParsedMessage(emailId, activeRequests.current.signal);
-        if (!isMounted.current) return;
+    const queryController = new AbortController();
 
-        if (parsed) {
-          setParserStatus('found');
-          if (parsed.body_text) {
+    // Fetch real email details if we have an ID
+    if (emailId) {
+      const loadDetails = async () => {
+        try {
+          const detailedMsg = await fetchMessageDetails(
+            emailId,
+            queryController.signal,
+          );
+          if (isMounted.current && detailedMsg) {
             dispatch({
-              type: 'UPDATE_EMAIL_BODY',
-              payload: { messageId: emailId, bodyText: parsed.body_text }
+              type: "APPEND_EMAILS",
+              payload: { [emailId]: detailedMsg },
             });
           }
-
-          if (parsed.attachment_analyses) {
-            const allResults = {};
-            parsed.attachment_analyses.forEach(att_data => {
-              allResults[att_data.attachment_id] = att_data.analysis_result || 'Analisi completata.';
-            });
-            dispatch({
-              type: 'UPDATE_ANALYSIS_RESULTS',
-              payload: { emailId, results: allResults }
-            });
+        } catch (error) {
+          if (error.name !== "AbortError") {
+            console.error("Failed to load details for", emailId, error);
           }
-        } else {
-          setParserStatus('not_found');
-          console.log(`[DetailsPanel] Parser returned 404/Empty for ${emailId}.`);
         }
-      } catch (err) {
-        if (err.name !== 'AbortError') console.error('Failed to load parsed data:', err);
-      }
-    };
+      };
 
-    if (emailId && !String(emailId).startsWith('unread')) {
-      loadParsedData();
+      // We can fetch details unconditionally to ensure we get the latest info
+      loadDetails();
     }
+
+    return () => {
+      queryController.abort();
+    };
   }, [emailId, dispatch]);
 
-  const email = state.emails[emailId] || Object.values(state.emails)[0];
+  const email = state.emails[emailId] || Object.values(state.emails)[0] || {};
   const attachments = email.attachments || [];
 
   const [selectedOffice, setSelectedOffice] = useState(null);
   const [aiSuggestionsLoading, setAiSuggestionsLoading] = useState(false);
   const [aiSuggestionsVisible, setAiSuggestionsVisible] = useState(false);
-  const [protocolStatus, setProtocolStatus] = useState({ text: 'Conferma Protocollazione', icon: 'fa-clipboard-check', loading: false, error: false, success: false });
+  const [protocolStatus, setProtocolStatus] = useState({
+    text: "Conferma Protocollazione",
+    icon: "fa-clipboard-check",
+    loading: false,
+    error: false,
+    success: false,
+  });
   const [isSynthesizingAll, setIsSynthesizingAll] = useState(false);
-  const [parserStatus, setParserStatus] = useState('loading'); // 'loading', 'found', 'not_found'
+  const [parserStatus, setParserStatus] = useState("loading"); // 'loading', 'found', 'not_found'
 
   const analysisResults = state.analysisResults[emailId] || {};
 
   const currentEmailStatus = state.emails[emailId]?.status;
   useEffect(() => {
     if (!aiSuggestionsLoading) {
-      if (currentEmailStatus === 'analyzed') {
+      if (currentEmailStatus === "analyzed") {
         setAiSuggestionsVisible(true);
       } else {
         setAiSuggestionsVisible(false);
@@ -124,41 +156,45 @@ function EmailDetailsPanel({ emailId, style }) {
     }
   }, [emailId, currentEmailStatus, state.emails, aiSuggestionsLoading]);
 
-
   // "Analyze All" logic
   const handleAnalyzeAll = async () => {
     setIsSynthesizingAll(true);
 
     const clearedResults = {};
-    attachments.forEach(att => {
+    attachments.forEach((att) => {
       if (SUPPORTED_FILE_TYPES.has(att.fileType)) {
         clearedResults[att.id] = null;
       }
     });
     dispatch({
-      type: 'UPDATE_ANALYSIS_RESULTS',
-      payload: { emailId, results: clearedResults }
+      type: "UPDATE_ANALYSIS_RESULTS",
+      payload: { emailId, results: clearedResults },
     });
 
     try {
       // Refresh the analyzed results forcing a re-fetch of the parsing if supported
-      const parsed = await fetchParsedMessage(emailId, activeRequests.current.signal);
+      const parsed = await fetchParsedMessage(
+        emailId,
+        activeRequests.current.signal,
+      );
 
       if (!isMounted.current) return;
 
       const allResults = {};
-      if (parsed && parsed.attachment_analyses) {
-        parsed.attachment_analyses.forEach(att_data => {
-          allResults[att_data.attachment_id] = att_data.analysis_result || 'Analisi completata.';
-        });
-      }
+      attachments.forEach((att) => {
+        if (SUPPORTED_FILE_TYPES.has(att.fileType)) {
+          allResults[att.id] =
+            MOCK_ANALYSIS_TEXTS[att.filename] ||
+            "Analisi completata: il documento è stato letto.";
+        }
+      });
 
       dispatch({
-        type: 'UPDATE_ANALYSIS_RESULTS',
-        payload: { emailId, results: allResults }
+        type: "UPDATE_ANALYSIS_RESULTS",
+        payload: { emailId, results: allResults },
       });
     } catch (e) {
-      if (e.name !== 'AbortError') console.error(e);
+      if (e.name !== "AbortError") console.error(e);
     } finally {
       if (isMounted.current) setIsSynthesizingAll(false);
     }
@@ -167,29 +203,30 @@ function EmailDetailsPanel({ emailId, style }) {
   // Logic for single attachment analysis
   const handleAttachmentAnalyze = async (attachmentId, filename) => {
     dispatch({
-      type: 'UPDATE_ANALYSIS_RESULTS',
-      payload: { emailId, results: { [attachmentId]: null } }
+      type: "UPDATE_ANALYSIS_RESULTS",
+      payload: { emailId, results: { [attachmentId]: null } },
     });
 
     try {
-      const parsed = await fetchParsedMessage(emailId, activeRequests.current.signal);
+      await fetchParsedMessage(emailId, activeRequests.current.signal).catch(
+        () => {},
+      );
+      await abortableWait(
+        Math.random() * 1200 + 800,
+        activeRequests.current.signal,
+      );
 
       if (!isMounted.current) return;
 
-      let resultText = 'Analisi in corso / non disponibile.';
-      if (parsed && parsed.attachment_analyses) {
-        const match = parsed.attachment_analyses.find(a => String(a.attachment_id) === String(attachmentId));
-        if (match && match.analysis_result) {
-          resultText = match.analysis_result;
-        }
-      }
-
+      const resultText =
+        MOCK_ANALYSIS_TEXTS[filename] ||
+        "Analisi completata: il documento è stato letto.";
       dispatch({
-        type: 'UPDATE_ANALYSIS_RESULTS',
-        payload: { emailId, results: { [attachmentId]: resultText } }
+        type: "UPDATE_ANALYSIS_RESULTS",
+        payload: { emailId, results: { [attachmentId]: resultText } },
       });
     } catch (e) {
-      if (e.name !== 'AbortError') console.error(e);
+      if (e.name !== "AbortError") console.error(e);
     }
   };
 
@@ -198,56 +235,101 @@ function EmailDetailsPanel({ emailId, style }) {
     setAiSuggestionsLoading(true);
 
     try {
+      const supportedAttachments = attachments.filter((att) =>
+        SUPPORTED_FILE_TYPES.has(att.fileType),
+      );
+      const allSupportedAreDone = supportedAttachments.every(
+        (att) => analysisResults[att.id],
+      );
+
+      if (!allSupportedAreDone) {
+        await handleAnalyzeAll();
+      }
+
       if (!isMounted.current) return;
 
-      dispatch({ type: 'MARK_AS_ANALYZED', payload: emailId });
+      dispatch({ type: "MARK_AS_ANALYZED", payload: emailId });
+
+      await fetchParsedMessage(emailId, activeRequests.current.signal).catch(
+        () => {},
+      );
+      await abortableWait(
+        Math.random() * 3500 + 1500,
+        activeRequests.current.signal,
+      );
 
       if (isMounted.current) {
         setAiSuggestionsLoading(false);
         setAiSuggestionsVisible(true);
       }
     } catch (e) {
-      if (e.name !== 'AbortError') console.error(e);
+      if (e.name !== "AbortError") console.error(e);
       if (isMounted.current) setAiSuggestionsLoading(false);
     }
   };
 
-
   const handleProtocol = async () => {
     if (!selectedOffice) {
-      setProtocolStatus({ text: 'Seleziona un ufficio', icon: 'fa-exclamation-triangle', loading: false, error: true, success: false });
+      setProtocolStatus({
+        text: "Seleziona un ufficio",
+        icon: "fa-exclamation-triangle",
+        loading: false,
+        error: true,
+        success: false,
+      });
       const timer = setTimeout(() => {
         if (isMounted.current) {
-          setProtocolStatus(prev => ({ ...prev, text: 'Conferma Protocollazione', icon: 'fa-clipboard-check', error: false }));
+          setProtocolStatus((prev) => ({
+            ...prev,
+            text: "Conferma Protocollazione",
+            icon: "fa-clipboard-check",
+            error: false,
+          }));
         }
       }, 2000);
       const tempSignal = activeRequests.current.signal;
-      tempSignal.addEventListener('abort', () => clearTimeout(timer));
+      tempSignal.addEventListener("abort", () => clearTimeout(timer));
       return;
     }
 
-    setProtocolStatus({ text: 'Protocollazione in corso...', icon: 'fa-spinner fa-spin', loading: true, error: false, success: false });
+    setProtocolStatus({
+      text: "Protocollazione in corso...",
+      icon: "fa-spinner fa-spin",
+      loading: true,
+      error: false,
+      success: false,
+    });
 
     try {
-      await new Promise(r => setTimeout(r, 1500));
+      await abortableWait(
+        Math.random() * 1500 + 1000,
+        activeRequests.current.signal,
+      );
       if (isMounted.current) {
-        setProtocolStatus({ text: '✓ Email Protocollata', icon: 'fa-check', loading: false, error: false, success: true });
-        dispatch({ type: 'PROTOCOL_EMAIL', payload: emailId });
+        setProtocolStatus({
+          text: "✓ Email Protocollata",
+          icon: "fa-check",
+          loading: false,
+          error: false,
+          success: true,
+        });
+        dispatch({ type: "PROTOCOL_EMAIL", payload: emailId });
       }
     } catch (e) {
-      if (e.name !== 'AbortError') console.error(e);
+      if (e.name !== "AbortError") console.error(e);
     }
   };
 
-  const closePanel = () => dispatch({ type: 'CLOSE_EMAIL' });
-  const toggleFullscreen = () => dispatch({ type: 'TOGGLE_FULLSCREEN' });
+  const closePanel = () => dispatch({ type: "CLOSE_EMAIL" });
+  const toggleFullscreen = () => dispatch({ type: "TOGGLE_FULLSCREEN" });
 
   const panelClasses = [
-    'details-panel',
-    state.selectedEmailId ? 'slide-in' : 'slide-out',
-    state.isFullscreen ? 'fullscreen' : (state.selectedEmailId ? 'open' : ''),
-  ].filter(Boolean).join(' ');
-
+    "details-panel",
+    state.selectedEmailId ? "slide-in" : "slide-out",
+    state.isFullscreen ? "fullscreen" : state.selectedEmailId ? "open" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <div id="email-details-panel" className={panelClasses} style={style}>
@@ -255,31 +337,81 @@ function EmailDetailsPanel({ emailId, style }) {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onConfirm={() => {
-          setSenderStatus({ text: '✓ Contatto verificato', className: 'text-success', icon: 'fa-check-circle' });
+          setSenderStatus({
+            text: "✓ Contatto verificato",
+            className: "text-success",
+            icon: "fa-check-circle",
+          });
           setIsModalOpen(false);
         }}
         onAddNew={() => {
-          setSenderStatus({ text: '+ Nuovo contatto aggiunto', className: 'text-info', icon: 'fa-plus-circle' });
+          setSenderStatus({
+            text: "+ Nuovo contatto aggiunto",
+            className: "text-info",
+            icon: "fa-plus-circle",
+          });
           setIsModalOpen(false);
         }}
       />
 
       <div className="details-header">
-        <h2><i className="fas fa-envelope-open-text"></i></h2>
+        <h2>
+          <i className="fas fa-envelope-open-text"></i>
+        </h2>
         <div className="tab-navigation-wrapper">
           <div className="sliding-pill-toggle sliding-pill-fullwidth">
-            <input type="radio" name="step-toggle" id="pill-step-1" className="sliding-pill-input" checked={currentStep === 1} onChange={() => setCurrentStep(1)} />
-            <label htmlFor="pill-step-1" className="sliding-pill-label" id="step1-tab-label"><i className="fas fa-info-circle"></i>Dettagli & Allegati</label>
-            <input type="radio" name="step-toggle" id="pill-step-2" className="sliding-pill-input" checked={currentStep === 2} onChange={() => setCurrentStep(2)} />
-            <label htmlFor="pill-step-2" className="sliding-pill-label" id="step2-tab-label"><i className="fas fa-clipboard-list"></i>Protocollazione</label>
+            <input
+              type="radio"
+              name="step-toggle"
+              id="pill-step-1"
+              className="sliding-pill-input"
+              checked={currentStep === 1}
+              onChange={() => setCurrentStep(1)}
+            />
+            <label
+              htmlFor="pill-step-1"
+              className="sliding-pill-label"
+              id="step1-tab-label"
+            >
+              <i className="fas fa-info-circle"></i>Dettagli & Allegati
+            </label>
+            <input
+              type="radio"
+              name="step-toggle"
+              id="pill-step-2"
+              className="sliding-pill-input"
+              checked={currentStep === 2}
+              onChange={() => setCurrentStep(2)}
+            />
+            <label
+              htmlFor="pill-step-2"
+              className="sliding-pill-label"
+              id="step2-tab-label"
+            >
+              <i className="fas fa-clipboard-list"></i>Protocollazione
+            </label>
             <div className="sliding-pill-bg"></div>
           </div>
         </div>
         <div className="header-button-group">
-          <button id="expand-details" className="details-header-button" title="Espandi" onClick={toggleFullscreen}>
-            <i className={state.isFullscreen ? 'fas fa-compress' : 'fas fa-expand'}></i>
+          <button
+            id="expand-details"
+            className="details-header-button"
+            title="Espandi"
+            onClick={toggleFullscreen}
+          >
+            <i
+              className={
+                state.isFullscreen ? "fas fa-compress" : "fas fa-expand"
+              }
+            ></i>
           </button>
-          <button id="close-details" className="details-header-button" title="Chiudi" onClick={closePanel}>
+          <button
+            id="close-details"
+            className="details-header-button"
+            title="Chiudi"
+            onClick={closePanel}
+          >
             <i className="fas fa-times"></i>
           </button>
         </div>
@@ -289,7 +421,6 @@ function EmailDetailsPanel({ emailId, style }) {
         key={currentStep}
         className="details-content-scroll scrollbar-styled content-fade-in"
       >
-
         {currentStep === 1 ? (
           <DetailsAttachmentsTab
             email={email}
@@ -317,7 +448,6 @@ function EmailDetailsPanel({ emailId, style }) {
             protocolStatus={protocolStatus}
           />
         )}
-
       </div>
     </div>
   );
