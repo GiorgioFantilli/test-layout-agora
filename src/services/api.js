@@ -104,3 +104,28 @@ export const fetchParsedMessage = async (messageId, signal) => {
         throw error;
     }
 };
+
+/**
+ * Fetch email accounts from the Poller service.
+ */
+export const fetchEmailAccounts = async (signal) => {
+  try {
+    const response = await fetch(`${POLLER_API_BASE}/email-accounts/`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Tenant-Code": "default",
+      },
+      signal,
+    });
+    if (!response.ok) {
+      throw new Error(`Error fetching email accounts: ${response.statusText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    if (error.name !== "AbortError") {
+      console.error("Failed to fetch email accounts", error);
+    }
+    throw error;
+  }
+};
