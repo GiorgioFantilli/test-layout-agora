@@ -168,6 +168,37 @@ export const fetchMessageDetails = async (messageId, signal) => {
 };
 
 /**
+ * Download an attachment from the Poller service.
+ * Returns a Blob containing the attachment data.
+ * Can be used for both download and preview.
+ */
+export const downloadAttachment = async (attachmentId, signal) => {
+  try {
+    const response = await fetch(
+      `${POLLER_API_BASE}/attachments/${attachmentId}/download`,
+      {
+        method: "GET",
+        headers: {
+          "X-Tenant-Code": "default",
+        },
+        signal,
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(`Error downloading attachment: ${response.statusText}`);
+    }
+
+    return await response.blob();
+  } catch (error) {
+    if (error.name !== "AbortError") {
+      console.error(`Failed to download attachment ${attachmentId}`, error);
+    }
+    throw error;
+  }
+};
+
+/**
  * Fetch total count of messages, optionally with a status filter.
  */
 export const fetchMessageCount = async (signal, statuses = []) => {

@@ -50,7 +50,7 @@ export const mapBackendStatusToFrontend = (
  * Transforms a backend Attachment DTO into the format expected by the frontend.
  */
 export const transformAttachmentDto = (att) => ({
-  id: att.id.toString(),
+  id: att.id?.toString() || att.attachment_id?.toString() || null,
   filename: att.filename,
   fileType: att.mime_type || "application/octet-stream",
   sizeMB: att.size_bytes ? (att.size_bytes / (1024 * 1024)).toFixed(2) : 0,

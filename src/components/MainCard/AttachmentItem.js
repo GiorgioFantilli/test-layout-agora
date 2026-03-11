@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { SUPPORTED_FILE_TYPES, getAttachmentVisuals } from '../../utils/uiUtils';
 import AiButton from './AiButton';
+import { downloadAttachment } from '../../services/api';
 
 
 function AttachmentItem({ attachment, onAnalyze, analysisResult, isExternallyLoading = false }) {
@@ -16,6 +17,33 @@ function AttachmentItem({ attachment, onAnalyze, analysisResult, isExternallyLoa
     }
     
     setIsAnalyzing(false);
+  };
+
+  const handleDownload = async () => {
+    try {
+      const blob = await downloadAttachment(attachment.id);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', attachment.filename);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Download failed", error);
+    }
+  };
+
+  const handlePreview = async () => {
+    try {
+      const blob = await downloadAttachment(attachment.id);
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      // Note: we don't revoke here because the new window needs the URL
+    } catch (error) {
+      console.error("Preview failed", error);
+    }
   };
 
 
@@ -41,10 +69,10 @@ function AttachmentItem({ attachment, onAnalyze, analysisResult, isExternallyLoa
             </div>
 
             <div className="attachment-actions">
-                <button className="link-button mr-[-0.5rem]"> 
+                <button className="link-button mr-[-0.5rem]" onClick={handlePreview}> 
                     <i className="fas fa-eye"></i>Visualizza
                 </button>
-                <button className="link-button"> 
+                <button className="link-button" onClick={handleDownload}> 
                     <i className="fas fa-download"></i>Scarica
                 </button>
 
