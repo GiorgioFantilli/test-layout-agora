@@ -1,36 +1,9 @@
-import { mapBackendStatusToFrontend } from "../utils/statusMapper";
+import { transformMessageDto, transformAttachmentDto } from "./dtoMappers";
 
 const POLLER_API_BASE =
   process.env.REACT_APP_POLLER_URL || "http://localhost/poller";
 const PARSER_API_BASE =
   process.env.REACT_APP_PARSER_URL || "http://localhost/parser";
-
-/**
- * Transforms a backend MessageRead DTO into the format expected by the frontend.
- */
-export const transformMessageDto = (msg) => {
-  // Map backend status to frontend status
-  const frontendStatus = mapBackendStatusToFrontend(msg.status, msg.parse_status);
-
-  return {
-    id: msg.id,
-    sender: msg.from_addr || "Sconosciuto",
-    email: msg.from_addr || "",
-    subject: msg.subject || "Nessun Oggetto",
-    body: "",
-    date: msg.msg_date,
-    recipient: msg.account?.address || "Sconosciuto",
-    readDate: msg.status === "read" ? msg.msg_date : null,
-    status: frontendStatus,
-    parse_status: msg.parse_status,
-    attachments: (msg.attachments || []).map((att) => ({
-      id: att.id.toString(),
-      filename: att.filename,
-      fileType: att.mime_type || "application/octet-stream",
-      sizeMB: att.size_bytes ? (att.size_bytes / (1024 * 1024)).toFixed(2) : 0,
-    })),
-  };
-};
 
 /**
  * Fetch messages from the Poller service.
@@ -177,8 +150,11 @@ export const fetchMessageDetails = async (messageId, signal) => {
         transformedMessage.body_text = parsedContent.body_text || "";
         transformedMessage.body_html = parsedContent.body_html || "";
 
-        // Poller's attachments are preferred as they contain the 'id' for downloading.
-        // We already handled them in transformMessageDto.
+        if (parsedContent.attachments && parsedContent.attachments.length > 0) {
+          transformedMessage.attachments = parsedContent.attachments.map(
+            transformAttachmentDto,
+          );
+        }
       }
     }
 

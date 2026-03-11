@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useAppContext } from '../../AppContext';
 import EmailItem from './EmailItem';
 import { fetchMessages } from '../../services/api';
-import { BACKEND_STATUS, FRONTEND_STATUS } from '../../utils/statusMapper';
+import { BACKEND_STATUS, FRONTEND_STATUS } from '../../services/dtoMappers';
 
 // Sentinel component that triggers an action when it enters the viewport
 function Sentinel({ onVisible, hasMore, isLoading }) {
