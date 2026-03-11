@@ -7,9 +7,7 @@ const defaultConfig = { app_title: "Sistema Protocollo", comune_name: "Comune di
 const initialState = {
     currentView: 'pending',
     selectedEmailId: null,
-    visuallyUnreadId: null,
     isFullscreen: false,
-    unreadExpanded: false,
     emails: {},
     config: defaultConfig,
     theme: localStorage.getItem('theme') || 'light',
@@ -20,38 +18,19 @@ const initialState = {
 function appReducer(state, action) {
     switch (action.type) {
         case 'SWITCH_VIEW':
-            // Clear visual unread marker when switching views
-            return { ...state, currentView: action.payload, isFullscreen: false, visuallyUnreadId: null };
+            return { ...state, currentView: action.payload, isFullscreen: false };
 
         case 'SELECT_EMAIL':
-            const newEmailsOnSelect = { ...state.emails };
-            const newSelectedId = action.payload;
-            let newVisuallyUnreadId = null;
-
-            // Handle marking email as 'read'
-            if (newEmailsOnSelect[newSelectedId] && newEmailsOnSelect[newSelectedId].status === 'unread') {
-                newEmailsOnSelect[newSelectedId] = {
-                    ...newEmailsOnSelect[newSelectedId],
-                    status: 'read',
-                    readDate: new Date().toISOString()
-                };
-                newVisuallyUnreadId = newSelectedId;
-            }
-
             return {
                 ...state,
-                selectedEmailId: newSelectedId,
+                selectedEmailId: action.payload,
                 isFullscreen: false,
-                emails: newEmailsOnSelect,
-                visuallyUnreadId: newVisuallyUnreadId
             };
 
         case 'CLOSE_EMAIL':
-            return { ...state, selectedEmailId: null, isFullscreen: false, visuallyUnreadId: null };
+            return { ...state, selectedEmailId: null, isFullscreen: false };
         case 'TOGGLE_FULLSCREEN':
             return { ...state, isFullscreen: !state.isFullscreen };
-        case 'TOGGLE_UNREAD':
-            return { ...state, unreadExpanded: !state.unreadExpanded };
         case 'SET_THEME':
             localStorage.setItem('theme', action.payload);
             return { ...state, theme: action.payload };
@@ -64,12 +43,12 @@ function appReducer(state, action) {
             if (newEmailsOnProtocol[action.payload]) {
                 newEmailsOnProtocol[action.payload].status = 'processed';
             }
-            return { ...state, emails: newEmailsOnProtocol, selectedEmailId: null, isFullscreen: false, visuallyUnreadId: null };
+            return { ...state, emails: newEmailsOnProtocol, selectedEmailId: null, isFullscreen: false };
         case 'UPDATE_CONFIG':
             return { ...state, config: { ...state.config, ...action.payload } };
         case 'MARK_AS_ANALYZED':
             const newEmailsOnAnalyze = { ...state.emails };
-            if (newEmailsOnAnalyze[action.payload] && (newEmailsOnAnalyze[action.payload].status === 'read' || newEmailsOnAnalyze[action.payload].status === 'unread')) {
+            if (newEmailsOnAnalyze[action.payload] && newEmailsOnAnalyze[action.payload].status === 'pending') {
                 newEmailsOnAnalyze[action.payload].status = 'analyzed';
             }
             return { ...state, emails: newEmailsOnAnalyze };

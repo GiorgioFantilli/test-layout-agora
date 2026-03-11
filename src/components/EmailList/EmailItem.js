@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../../AppContext';
 import { formatEmailDateTime } from '../../utils/dateUtils';
-import { fetchParsedMessage } from '../../services/api';
 
 function EmailItem({ emailId, email, onSelect, isSelected }) {
   const { dispatch } = useAppContext();
@@ -17,37 +16,24 @@ function EmailItem({ emailId, email, onSelect, isSelected }) {
   const handleAnalyze = async (e) => {
     e.stopPropagation();
     setIsLoading(true);
-    
+
     try {
-        const controller = new AbortController();
-        const parsed = await fetchParsedMessage(emailId, controller.signal);
-        
-        if (isMounted.current) {
-            if (parsed && parsed.body_text) {
-                dispatch({ 
-                    type: 'UPDATE_EMAIL_BODY', 
-                    payload: { messageId: emailId, bodyText: parsed.body_text } 
-                });
-            }
-            dispatch({ type: 'MARK_AS_ANALYZED', payload: emailId });
-        }
+      if (isMounted.current) {
+        dispatch({ type: 'MARK_AS_ANALYZED', payload: emailId });
+      }
     } catch (err) {
-        console.error("Analysis failed", err);
-        // Fallback or marking it anyways for UI flow if backend isn't perfect yet
-        if (isMounted.current) {
-            dispatch({ type: 'MARK_AS_ANALYZED', payload: emailId });
-        }
+      console.error("Analysis failed", err);
     } finally {
-        if (isMounted.current) {
-            setIsLoading(false);
-        }
+      if (isMounted.current) {
+        setIsLoading(false);
+      }
     }
   };
 
   const cleanBody = (email.body || '').replace(/\n/g, ' ');
-  const bodyPreview = cleanBody.length > 300 
-      ? cleanBody.substring(0, 300) + '...' 
-      : cleanBody;
+  const bodyPreview = cleanBody.length > 300
+    ? cleanBody.substring(0, 300) + '...'
+    : cleanBody;
   const attachmentCount = email.attachments ? email.attachments.length : 0;
   const attachmentText = `${attachmentCount} allegat${attachmentCount === 1 ? 'o' : 'i'}`;
 
@@ -67,7 +53,7 @@ function EmailItem({ emailId, email, onSelect, isSelected }) {
     if (email.status === 'analyzed') {
       return <span className="ai-badge-list ai-badge-analyzed"><i className="fas fa-check-double"></i> Analizzata</span>;
     }
-    if (email.status === 'read' || email.status === 'unread') {
+    if (email.status === 'pending') {
       return (
         <button
           className={aiButtonClasses}
@@ -95,7 +81,7 @@ function EmailItem({ emailId, email, onSelect, isSelected }) {
             <span className="sender-email">{email.email}</span>
           </div>
           <p className="email-subject">{email.subject}</p>
-          <p className="email-body-preview">{bodyPreview}</p>
+          {bodyPreview.length > 0 && <p className="email-body-preview">{bodyPreview}</p>}
         </div>
         <div className="email-item-aside">
           {/* 1. Data e Ora */}
@@ -106,8 +92,8 @@ function EmailItem({ emailId, email, onSelect, isSelected }) {
 
           {/* 2. Allegati */}
           <span className="meta-item attachment-item">
-             <i className="fas fa-paperclip"></i> 
-             {attachmentCount > 0 ? attachmentText : 'Nessuno'}
+            <i className="fas fa-paperclip"></i>
+            {attachmentCount > 0 ? attachmentText : 'Nessuno'}
           </span>
 
           {/* 3. Pulsante/Badge */}

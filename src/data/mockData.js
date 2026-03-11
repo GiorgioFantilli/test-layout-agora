@@ -62,7 +62,7 @@ export const emailData = {
         date: today.toISOString(),
         recipient: 'ufficio.protocollo@pec.comune.it',
         readDate: null,
-        status: 'unread',
+        status: 'pending',
         attachments: [
             { id: 'att1-1', filename: 'planimetria_locale.pdf', fileType: FILE_TYPES.pdf, sizeMB: 2.3 },
             { id: 'att1-2', filename: 'certificato_agibilita.pdf', fileType: FILE_TYPES.pdf, sizeMB: 1.8 },
@@ -80,7 +80,7 @@ export const emailData = {
         body: 'Buongiorno, richiedo cortesemente il certificato di residenza aggiornato. Serve per pratiche INPS.\n\nGrazie mille,\nGiulia Bianchi', 
         date: today.toISOString(),
         readDate: null,
-        status: 'unread',
+        status: 'pending',
         attachments: [
             { id: 'att2-1', filename: 'richiesta_residenza.pdf', fileType: FILE_TYPES.pdf, sizeMB: 0.2 }
         ]
@@ -93,7 +93,7 @@ export const emailData = {
         body: 'Allego la documentazione per il rinnovo del permesso ZTL per l\'anno corrente.\n\nDistinti saluti,\nLuca Verdi', 
         date: today.toISOString(),
         readDate: null,
-        status: 'unread',
+        status: 'pending',
         attachments: [
             { id: 'att3-1', filename: 'modulo_ztl.pdf', fileType: FILE_TYPES.pdf, sizeMB: 0.5 },
             { id: 'att3-2', filename: 'libretto_auto.jpg', fileType: FILE_TYPES.jpg, sizeMB: 1.1 }
@@ -107,7 +107,7 @@ export const emailData = {
         body: 'Spett.le Comune, inoltro richiesta di contributi per l\'associazione sportiva "ASD Calcio Giovani".\nResto a disposizione per chiarimenti.', 
         date: today.toISOString(),
         readDate: null,
-        status: 'unread',
+        status: 'pending',
         attachments: [] 
     },
     'unread5': { 
@@ -118,7 +118,7 @@ export const emailData = {
         body: 'Buongiorno, segnalo la presenza di numerose buche pericolose in Via Garibaldi, all\'altezza del civico 15.\nAllego foto.\nCordiali saluti.', 
         date: today.toISOString(),
         readDate: null,
-        status: 'unread',
+        status: 'pending',
         attachments: [
             { id: 'att5-1', filename: 'foto_buca_1.jpg', fileType: FILE_TYPES.jpg, sizeMB: 2.5 },
             { id: 'att5-2', filename: 'foto_buca_2.jpg', fileType: FILE_TYPES.jpg, sizeMB: 2.8 },
@@ -134,7 +134,7 @@ export const emailData = {
         body: 'Con la presente, si notifica in via telematica l\'atto di citazione relativo alla causa in oggetto.\nSi allega atto e procura.\n\nDistinti Saluti,\nAvv. M. Greco', 
         date: today.toISOString(),
         readDate: null,
-        status: 'unread',
+        status: 'pending',
         attachments: [
             { id: 'att6-1', filename: 'atto_citazione.pdf', fileType: FILE_TYPES.pdf, sizeMB: 1.1 },
             { id: 'att6-2', filename: 'procura_legale.pdf', fileType: FILE_TYPES.pdf, sizeMB: 0.3 }
@@ -148,7 +148,7 @@ export const emailData = {
         body: 'In qualità di tecnico incaricato, trasmetto in allegato la SCIA relativa ai lavori di manutenzione straordinaria presso l\'immobile sito in Via Verdi 10.\n\nCordiali saluti,\nArch. Fabio Marino', 
         date: today.toISOString(),
         readDate: null,
-        status: 'unread',
+        status: 'pending',
         attachments: [
             { id: 'att7-1', filename: 'SCIA_ViaVerdi.pdf', fileType: FILE_TYPES.pdf, sizeMB: 1.5 },
             { id: 'att7-2', filename: 'Relazione_Tecnica_Asseverata.pdf', fileType: FILE_TYPES.pdf, sizeMB: 3.2 },
@@ -165,7 +165,7 @@ export const emailData = {
         body: 'In allegato la fattura elettronica n. 123/2025 in formato P7M.',
         date: today.toISOString(),
         readDate: null,
-        status: 'unread',
+        status: 'pending',
         attachments: [
             { id: 'att8-1', filename: 'IT0123456789_123.xml.p7m', fileType: FILE_TYPES.p7m, sizeMB: 0.2 }
         ]
@@ -178,7 +178,7 @@ export const emailData = {
         body: 'Si invia in allegato la documentazione compressa per la Gara n. 55/ABC.',
         date: today.toISOString(),
         readDate: null,
-        status: 'unread',
+        status: 'pending',
         attachments: [
             { id: 'att9-1', filename: 'Documentazione_Gara_55_ABC.zip', fileType: FILE_TYPES.zip, sizeMB: 15.2 }
         ]
@@ -191,7 +191,7 @@ export const emailData = {
         body: 'Si inviano i dati catastali aggiornati in formato XML.',
         date: today.toISOString(),
         readDate: null,
-        status: 'unread',
+        status: 'pending',
         attachments: [
             { id: 'att10-1-xml', filename: 'dati_catasto_2025.xml', fileType: FILE_TYPES.xml, sizeMB: 0.8 }
         ]
@@ -204,7 +204,7 @@ export const emailData = {
         body: 'Si avvisa che gli uffici comunali rimarranno chiusi per la festa del Santo Patrono il giorno 29 Novembre.\n\nCordiali Saluti,\nL\'Ufficio Personale', 
         date: today.toISOString(),
         readDate: null,
-        status: 'unread',
+        status: 'pending',
         attachments: [] 
     },
     'unread12': { 
@@ -215,7 +215,7 @@ export const emailData = {
         body: 'Inviamo in allegato i log di sistema e i file di configurazione .dat relativi all\'ultimo backup del server.\n\nSupporto IT', 
         date: today.toISOString(),
         readDate: null,
-        status: 'unread',
+        status: 'pending',
         attachments: [
             { id: 'att12-1', filename: 'system_backup.log', fileType: FILE_TYPES.log, sizeMB: 5.5 },
             { id: 'att12-2', filename: 'config_server.dat', fileType: FILE_TYPES.dat, sizeMB: 0.1 },
@@ -229,7 +229,7 @@ export const emailData = {
         body: 'Spett.le Ufficio Anagrafe,\n\ncon la presente comunico il cambio di residenza da Via Vecchia 10 a Via Nuova 25.\n\nIn allegato i documenti richiesti.\n\nCordiali saluti,\nAnna Neri', 
         date: yesterday.toISOString(),
         readDate: yesterday.toISOString(),
-        status: 'read',
+        status: 'pending',
         attachments: [
             { id: 'att10-1', filename: 'documento_identita_genitore.pdf', fileType: FILE_TYPES.pdf, sizeMB: 1.2 },
             { id: 'att10-2', filename: 'certificato_residenza_vecchio.pdf', fileType: FILE_TYPES.pdf, sizeMB: 0.4 }
@@ -243,7 +243,7 @@ export const emailData = {
         body: 'Si richiede autorizzazione per lo svolgimento di un evento pubblico in Piazza del Popolo il giorno 15 Novembre 2025.\nAlleghiamo piano sicurezza e programma.', 
         date: yesterday.toISOString(),
         readDate: yesterday.toISOString(),
-        status: 'read',
+        status: 'pending',
         attachments: [
             { id: 'att11-1', filename: 'Richiesta_Autorizzazione.pdf', fileType: FILE_TYPES.pdf, sizeMB: 0.5 },
             { id: 'att11-2', filename: 'Piano_Sicurezza_Evento.pdf', fileType: FILE_TYPES.pdf, sizeMB: 2.5 },
@@ -259,7 +259,7 @@ export const emailData = {
         body: 'Invio richiesta di patrocinio comunale per la manifestazione culturale "Arte in Città" che si terrà a Dicembre.\nRingraziando anticipatamente...', 
         date: yesterday.toISOString(),
         readDate: yesterday.toISOString(),
-        status: 'read',
+        status: 'pending',
         attachments: [
             { id: 'att12-1', filename: 'Richiesta_Patrocinio.pdf', fileType: FILE_TYPES.pdf, sizeMB: 0.3 }
         ]
@@ -272,7 +272,7 @@ export const emailData = {
         body: 'Si comunica che il giorno 10 Novembre, Via Cavour sarà chiusa al traffico dalle 08:00 alle 14:00 per il mercato settimanale.\n\nCordiali saluti,\nIl Comandante', 
         date: yesterday.toISOString(),
         readDate: yesterday.toISOString(),
-        status: 'read',
+        status: 'pending',
         attachments: [
             { id: 'att13-1', filename: 'Ordinanza_Chiusura_Strada_10-11.pdf', fileType: FILE_TYPES.pdf, sizeMB: 0.3 }
         ]
@@ -285,7 +285,7 @@ export const emailData = {
         body: 'Si inoltra la modulistica e il bando per le iscrizioni agli asili nido comunali per l\'anno 2026/2027.\n\nL\'Ufficio Scuola', 
         date: yesterday.toISOString(),
         readDate: yesterday.toISOString(),
-        status: 'read',
+        status: 'pending',
         attachments: [
             { id: 'att14-1', filename: 'Modulo_Iscrizione_Asilo.pdf', fileType: FILE_TYPES.pdf, sizeMB: 0.8 },
             { id: 'att14-2', filename: 'Bando_Asili_2026.pdf', fileType: FILE_TYPES.pdf, sizeMB: 1.5 }
@@ -299,7 +299,7 @@ export const emailData = {
         body: 'Si comunica l\'avvio dei lavori edili in data odierna, come da pratica 456/2025 (Permesso di Costruire).\n\nSaluti.', 
         date: yesterday.toISOString(),
         readDate: yesterday.toISOString(),
-        status: 'read',
+        status: 'pending',
         attachments: [
             { id: 'att15-1', filename: 'Comunicazione_Inizio_Lavori.pdf', fileType: FILE_TYPES.pdf, sizeMB: 0.6 },
             { id: 'att15-2', filename: 'DURC_Impresa.pdf', fileType: FILE_TYPES.pdf, sizeMB: 0.4 },
@@ -314,7 +314,7 @@ export const emailData = {
         body: 'Spett.le Sindaco,\n\nrichiediamo l\'utilizzo della sala consiliare per un convegno sulla storia locale il giorno 20 Dicembre.\n\nIn attesa di riscontro,\nIl Presidente', 
         date: yesterday.toISOString(),
         readDate: yesterday.toISOString(),
-        status: 'read',
+        status: 'pending',
         attachments: [
             { id: 'att16-1', filename: 'Richiesta_Sala_Consiliare.pdf', fileType: FILE_TYPES.pdf, sizeMB: 0.2 }
         ]
@@ -327,7 +327,7 @@ export const emailData = {
         body: 'Vi inoltro una email che ho ricevuto per errore, credo sia di vostra competenza.',
         date: yesterday.toISOString(),
         readDate: yesterday.toISOString(),
-        status: 'read',
+        status: 'pending',
         attachments: [
             { id: 'att17-1', filename: 'email_inoltrata.eml', fileType: FILE_TYPES.eml, sizeMB: 0.1 }
         ]
@@ -340,7 +340,7 @@ export const emailData = {
         body: 'Si ricorda a tutti gli uffici di inviare la documentazione per la chiusura del bilancio trimestrale entro la fine della settimana.',
         date: yesterday.toISOString(),
         readDate: yesterday.toISOString(),
-        status: 'read',
+        status: 'pending',
         attachments: []
     },
     'email12': { 
@@ -351,7 +351,7 @@ export const emailData = {
         body: 'Gentile Ufficio Cultura,\n\nin riferimento alla nostra precedente richiesta, volevamo sapere se ci sono aggiornamenti.\n\nGrazie,\nLa Pro Loco', 
         date: yesterday.toISOString(),
         readDate: yesterday.toISOString(),
-        status: 'read',
+        status: 'pending',
         attachments: [] 
     },
     'email10': {

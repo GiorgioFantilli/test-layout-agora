@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useAppContext } from '../../AppContext';
 import EmailItem from './EmailItem';
 import { fetchMessages } from '../../services/api';
+import { BACKEND_STATUS, FRONTEND_STATUS } from '../../utils/statusMapper';
 
 // Sentinel component that triggers an action when it enters the viewport
 function Sentinel({ onVisible, hasMore, isLoading }) {
@@ -37,9 +38,8 @@ function EmailListPanel() {
 
   // Pagination cursors mapped by group name
   const pagRef = useRef({
-    unread: { skip: 0, hasMore: true, isLoading: false, statuses: ['UNREAD'] },
-    read: { skip: 0, hasMore: true, isLoading: false, statuses: ['READ'] },
-    processed: { skip: 0, hasMore: true, isLoading: false, statuses: ['PROCESSED'] }
+    pending: { skip: 0, hasMore: true, isLoading: false, statuses: [BACKEND_STATUS.PERSISTED] },
+    processed: { skip: 0, hasMore: true, isLoading: false, statuses: [BACKEND_STATUS.PROCESSED] }
   });
 
   const [, forceRender] = useState({});
@@ -71,8 +71,7 @@ function EmailListPanel() {
   // Initial load logic based on view
   useEffect(() => {
     if (state.currentView === 'pending') {
-      if (pagRef.current.unread.skip === 0) loadMore('unread');
-      if (pagRef.current.read.skip === 0) loadMore('read');
+      if (pagRef.current.pending.skip === 0) loadMore('pending');
     } else if (state.currentView === 'processed') {
       if (pagRef.current.processed.skip === 0) loadMore('processed');
     }
@@ -83,31 +82,19 @@ function EmailListPanel() {
     dispatch({ type: 'SELECT_EMAIL', payload: emailId });
   };
 
-  const toggleUnread = () => {
-    dispatch({ type: 'TOGGLE_UNREAD' });
-  };
-
   // Filter emails based on the current view mapping locally
   const allEmails = Object.entries(state.emails);
 
   const pendingEmails = allEmails
-    .filter(([id, email]) => email.status === 'read' || email.status === 'unread' || email.status === 'analyzed');
+    .filter(([id, email]) => email.status === FRONTEND_STATUS.PENDING || email.status === FRONTEND_STATUS.ANALYZED)
+    .sort(([idA, emailA], [idB, emailB]) => {
+      const dateA = emailA.date ? new Date(emailA.date).getTime() : 0;
+      const dateB = emailB.date ? new Date(emailB.date).getTime() : 0;
+      return dateB - dateA;
+    });
 
   const processedEmails = allEmails
-    .filter(([id, email]) => email.status === 'processed');
-
-  // Filter logic for 'Pending' view sections
-  const unreadEmails = pendingEmails
-    .filter(([id, email]) => email.status === 'unread' || id === state.visuallyUnreadId)
-    .sort(([idA, emailA], [idB, emailB]) => new Date(emailA.date) - new Date(emailB.date));
-
-  const readEmails = pendingEmails
-    .filter(([id, email]) => (email.status === 'read' || email.status === 'analyzed') && id !== state.visuallyUnreadId)
-    .sort(([idA, emailA], [idB, emailB]) => new Date(emailA.date) - new Date(emailB.date));
-
-  const unreadCount = unreadEmails.length;
-  // NOTE: This reflects dynamically loaded count, not total backend count.
-  const readCount = readEmails.length;
+    .filter(([id, email]) => email.status === FRONTEND_STATUS.PROCESSED);
 
   const subheadText = state.currentView === 'pending' ? 'Da Protocollare' : 'Protocollate';
 
@@ -123,93 +110,34 @@ function EmailListPanel() {
         </div>
 
         {state.currentView === 'pending' ? (
-          <>
-            {/* Unread Section */}
-            <div id="unread-section">
-              <div className="list-section-header" onClick={toggleUnread} style={{ cursor: 'pointer' }}>
-                <div className="list-header-content">
-                  <h3 className="flex items-center">
-                    <div className="list-icon-bg"><i className="fas fa-envelope"></i></div> Non Lette
-                  </h3>
-                  <button id="expand-unread" className="expand-unread-button">
-                    <i
-                      className="fas fa-chevron-down transform transition-transform"
-                      style={{ transform: state.unreadExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                    ></i>
-                  </button>
-                </div>
-              </div>
-
-              {!state.unreadExpanded && unreadCount > 0 ? (
-                <div id="unread-preview" className="unread-preview">
-                  {unreadEmails.slice(0, 3).map(([id, email]) => (
-                    <EmailItem
-                      key={id}
-                      emailId={id}
-                      email={email}
-                      onSelect={handleSelectEmail}
-                      isSelected={state.selectedEmailId === id}
-                    />
-                  ))}
-                  {(unreadEmails.length > 3 || pagRef.current.unread.hasMore) && (
-                    <div className="show-more-indicator" onClick={toggleUnread} style={{ cursor: 'pointer', textAlign: 'center', padding: '10px 0', color: '#007bff' }}>
-                      <i className="fas fa-chevron-down"></i> Espandi tutte le non lette <i className="fas fa-chevron-down"></i>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div id="unread-emails" style={{ display: state.unreadExpanded ? 'block' : 'none' }}>
-                  {unreadEmails.map(([id, email]) => (
-                    <EmailItem
-                      key={id}
-                      emailId={id}
-                      email={email}
-                      onSelect={handleSelectEmail}
-                      isSelected={state.selectedEmailId === id}
-                    />
-                  ))}
-                  <Sentinel
-                    hasMore={pagRef.current.unread.hasMore}
-                    isLoading={pagRef.current.unread.isLoading}
-                    onVisible={() => loadMore('unread')}
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Read Section */}
-            <div id="read-section">
-              <div className="list-section-header">
-                <div className="list-header-content">
-                  <h3 className="flex items-center">
-                    <div className="list-icon-bg"><i className="fas fa-envelope-open"></i></div> Lette
-                  </h3>
-                </div>
-              </div>
-              <div id="email-list" className="email-list-container">
-                {readEmails.map(([id, email]) => (
-                  <EmailItem
-                    key={id}
-                    emailId={id}
-                    email={email}
-                    onSelect={handleSelectEmail}
-                    isSelected={state.selectedEmailId === id}
-                  />
-                ))}
-                <Sentinel
-                  hasMore={pagRef.current.read.hasMore}
-                  isLoading={pagRef.current.read.isLoading}
-                  onVisible={() => loadMore('read')}
+          <div id="pending-section">
+            <div id="email-list" className="email-list-container">
+              {pendingEmails.map(([id, email]) => (
+                <EmailItem
+                  key={id}
+                  emailId={id}
+                  email={email}
+                  onSelect={handleSelectEmail}
+                  isSelected={state.selectedEmailId === id}
                 />
-              </div>
+              ))}
+              <Sentinel
+                hasMore={pagRef.current.pending.hasMore}
+                isLoading={pagRef.current.pending.isLoading}
+                onVisible={() => loadMore('pending')}
+              />
             </div>
-          </>
+          </div>
         ) : (
           /* Processed View */
           <div id="processed-section">
             <div id="email-list" className="email-list-container">
               {processedEmails
-                .sort(([idA, emailA], [idB, emailB]) => new Date(emailA.date) - new Date(emailB.date))
+                .sort(([idA, emailA], [idB, emailB]) => {
+                  const dateA = emailA.date ? new Date(emailA.date).getTime() : 0;
+                  const dateB = emailB.date ? new Date(emailB.date).getTime() : 0;
+                  return dateB - dateA;
+                })
                 .map(([id, email]) => (
                   <EmailItem
                     key={id}

@@ -1,35 +1,76 @@
+import { mapBackendStatusToFrontend } from '../utils/statusMapper';
 
 const POLLER_API_BASE = process.env.REACT_APP_POLLER_URL || 'http://localhost/poller';
 const PARSER_API_BASE = process.env.REACT_APP_PARSER_URL || 'http://localhost/parser';
+
+
+const decodeMimeSubject = (subject) => {
+    if (!subject) return '';
+
+    let cleanedSubject = subject.replace(/\?=\s+=\?/g, '?==?');
+
+    const mimeRegex = /=\?([^?]+)\?([BbQq])\?([^?]+)\?=/gi;
+
+    return cleanedSubject.replace(mimeRegex, (match, charset, encoding, text) => {
+        try {
+            if (encoding.toUpperCase() === 'Q') {
+                let qText = text.replace(/_/g, ' ');
+                qText = qText.replace(/=([A-Fa-f0-9]{2})/g, '%$1');
+                return decodeURIComponent(qText);
+            }
+
+            if (encoding.toUpperCase() === 'B') {
+                return decodeURIComponent(escape(atob(text)));
+            }
+        } catch (e) {
+            console.error("Errore nella decodifica dell'oggetto:", e);
+            return match;
+        }
+
+        return match;
+    });
+};
+
+const parseFromAddress = (fromAddr) => {
+    if (!fromAddr) {
+        return { sender: 'Sconosciuto', email: '' };
+    }
+
+    const emailMatch = fromAddr.match(/<[^>]+>/);
+
+    let email = '';
+    let sender = '';
+
+    if (emailMatch) {
+        email = emailMatch[0].trim();
+        sender = fromAddr.replace(email, '').replace(/["\\]/g, '').trim();
+    } else {
+        const cleanEmail = fromAddr.replace(/["\\]/g, '').trim();
+        email = `<${cleanEmail}>`;
+        sender = '';
+    }
+
+    return {
+        sender: sender || 'Sconosciuto',
+        email: email
+    };
+};
 
 /**
  * Transforms a backend MessageRead DTO into the format expected by the frontend.
  */
 export const transformMessageDto = (msg) => {
-    // Map backend status to frontend status
-    const statusUpper = (msg.status || '').toUpperCase();
-    const parseStatusUpper = (msg.parse_status || '').toUpperCase();
-
-    let frontendStatus = 'unread';
-    if (statusUpper === 'PROCESSED') {
-        frontendStatus = 'processed';
-    } else if (statusUpper === 'READ') {
-        if (parseStatusUpper === 'PARSED' || parseStatusUpper === 'ANALYZED') {
-            frontendStatus = 'analyzed';
-        } else {
-            frontendStatus = 'read';
-        }
-    }
+    const frontendStatus = mapBackendStatusToFrontend(msg.status, msg.parse_status);
+    const parsedFrom = parseFromAddress(msg.from_addr);
 
     return {
         id: msg.id,
-        sender: msg.from_addr || 'Sconosciuto',
-        email: msg.from_addr || '',
-        subject: msg.subject || 'Nessun Oggetto',
+        sender: parsedFrom.sender,
+        email: parsedFrom.email,
+        subject: decodeMimeSubject(msg.subject) || 'Nessun Oggetto',
         body: '',
         date: msg.msg_date,
         recipient: msg.account?.address || 'Sconosciuto',
-        readDate: msg.status === 'read' ? msg.msg_date : null,
         status: frontendStatus,
         parse_status: msg.parse_status,
         attachments: (msg.attachments || []).map(att => ({
@@ -56,7 +97,7 @@ export const fetchMessages = async (signal, limit = 50, skip = 0, statuses = [])
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'X-Tenant-Code': '00000000000'
+                'X-Tenant-Code': 'giorgio'
             },
             signal
         });
@@ -88,7 +129,7 @@ export const fetchParsedMessage = async (messageId, signal) => {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'X-Tenant-Code': '00000000000'
+                'X-Tenant-Code': 'giorgio'
             },
             signal
         });

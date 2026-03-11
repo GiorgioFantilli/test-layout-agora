@@ -16,7 +16,7 @@ function Sidebar() {
 
   const allEmails = Object.entries(state.emails);
   const pendingCount = allEmails
-    .filter(([id, email]) => email.status === 'read' || email.status === 'unread' || email.status === 'analyzed')
+    .filter(([id, email]) => email.status === 'pending' || email.status === 'analyzed')
     .length;
   const processedCount = allEmails
     .filter(([id, email]) => email.status === 'processed')
