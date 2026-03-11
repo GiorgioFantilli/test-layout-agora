@@ -1,3 +1,5 @@
+import { mapBackendStatusToFrontend } from "../utils/statusMapper";
+
 const POLLER_API_BASE =
   process.env.REACT_APP_POLLER_URL || "http://localhost/poller";
 const PARSER_API_BASE =
@@ -8,19 +10,7 @@ const PARSER_API_BASE =
  */
 export const transformMessageDto = (msg) => {
   // Map backend status to frontend status
-  const statusUpper = (msg.status || "").toUpperCase();
-  const parseStatusUpper = (msg.parse_status || "").toUpperCase();
-
-  let frontendStatus = "unread";
-  if (statusUpper === "PROCESSED") {
-    frontendStatus = "processed";
-  } else if (statusUpper === "READ") {
-    if (parseStatusUpper === "PARSED" || parseStatusUpper === "ANALYZED") {
-      frontendStatus = "analyzed";
-    } else {
-      frontendStatus = "read";
-    }
-  }
+  const frontendStatus = mapBackendStatusToFrontend(msg.status, msg.parse_status);
 
   return {
     id: msg.id,
@@ -62,7 +52,7 @@ export const fetchMessages = async (
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        "X-Tenant-Code": "00000000000",
+        "X-Tenant-Code": "default",
       },
       signal,
     });
@@ -96,7 +86,7 @@ export const fetchParsedMessage = async (messageId, signal) => {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          "X-Tenant-Code": "00000000000",
+          "X-Tenant-Code": "default",
         },
         signal,
       },
