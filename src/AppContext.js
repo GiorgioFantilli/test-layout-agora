@@ -88,20 +88,6 @@ function appReducer(state, action) {
                 }
             };
 
-        case 'UPDATE_EMAIL_BODY':
-            const { messageId, bodyText } = action.payload;
-            if (!state.emails[messageId]) return state;
-            return {
-                ...state,
-                emails: {
-                    ...state.emails,
-                    [messageId]: {
-                        ...state.emails[messageId],
-                        body: bodyText
-                    }
-                }
-            };
-
         default:
             return state;
     }
