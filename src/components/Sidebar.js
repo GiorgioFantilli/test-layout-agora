@@ -49,15 +49,13 @@ function Sidebar() {
     emailAccounts.length > 2 ? emailAccounts.length - 2 : 0;
 
   const allEmails = Object.entries(state.emails);
-  const pendingCount = allEmails.filter(
-    ([id, email]) =>
-      email.status === "read" ||
-      email.status === "unread" ||
-      email.status === "analyzed",
-  ).length;
-  const processedCount = allEmails.filter(
-    ([id, email]) => email.status === "processed",
-  ).length;
+
+  const pendingCount = allEmails
+    .filter(([id, email]) => email.status === 'pending' || email.status === 'analyzed')
+    .length;
+  const processedCount = allEmails
+    .filter(([id, email]) => email.status === 'processed')
+    .length;
 
   return (
     <aside className="sidebar">
@@ -255,13 +253,13 @@ function Sidebar() {
             <span className="user-stack-text">
               {emailAccounts.length > 0
                 ? emailAccounts.map((a, i) => (
-                    <React.Fragment key={a.id || i}>
-                      {a.address}
-                      {i < emailAccounts.length - 1 && (
-                        <span className="text-muted"> – </span>
-                      )}
-                    </React.Fragment>
-                  ))
+                  <React.Fragment key={a.id || i}>
+                    {a.address}
+                    {i < emailAccounts.length - 1 && (
+                      <span className="text-muted"> – </span>
+                    )}
+                  </React.Fragment>
+                ))
                 : "Caricamento..."}
             </span>
           </div>

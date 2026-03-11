@@ -4,23 +4,7 @@ import ContactModal from './ContactModal';
 import DetailsAttachmentsTab from './DetailsAttachmentsTab';
 import ProtocolTab from './ProtocolTab';
 import { SUPPORTED_FILE_TYPES } from '../../utils/uiUtils';
-import { MOCK_ANALYSIS_TEXTS } from '../../data/mockData';
 import { fetchParsedMessage } from '../../services/api';
-
-// Safe helper per unmount e memory leaks
-const abortableWait = (ms, signal) => {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      resolve();
-    }, ms);
-    if (signal) {
-      signal.addEventListener('abort', () => {
-        clearTimeout(timer);
-        reject(new DOMException('Aborted', 'AbortError'));
-      });
-    }
-  });
-};
 
 function EmailDetailsPanel({ emailId, style }) {
   const { state, dispatch } = useAppContext();
@@ -78,7 +62,44 @@ function EmailDetailsPanel({ emailId, style }) {
     setIsSynthesizingAll(false);
     setProtocolStatus({ text: 'Conferma Protocollazione', icon: 'fa-clipboard-check', loading: false, error: false, success: false });
     setAiSuggestionsVisible(false);
-  }, [emailId]);
+
+    const loadParsedData = async () => {
+      try {
+        const parsed = await fetchParsedMessage(emailId, activeRequests.current.signal);
+        if (!isMounted.current) return;
+
+        if (parsed) {
+          setParserStatus('found');
+          if (parsed.body_text) {
+            dispatch({
+              type: 'UPDATE_EMAIL_BODY',
+              payload: { messageId: emailId, bodyText: parsed.body_text }
+            });
+          }
+
+          if (parsed.attachment_analyses) {
+            const allResults = {};
+            parsed.attachment_analyses.forEach(att_data => {
+              allResults[att_data.attachment_id] = att_data.analysis_result || 'Analisi completata.';
+            });
+            dispatch({
+              type: 'UPDATE_ANALYSIS_RESULTS',
+              payload: { emailId, results: allResults }
+            });
+          }
+        } else {
+          setParserStatus('not_found');
+          console.log(`[DetailsPanel] Parser returned 404/Empty for ${emailId}.`);
+        }
+      } catch (err) {
+        if (err.name !== 'AbortError') console.error('Failed to load parsed data:', err);
+      }
+    };
+
+    if (emailId && !String(emailId).startsWith('unread')) {
+      loadParsedData();
+    }
+  }, [emailId, dispatch]);
 
   const email = state.emails[emailId] || Object.values(state.emails)[0];
   const attachments = email.attachments || [];
@@ -88,6 +109,7 @@ function EmailDetailsPanel({ emailId, style }) {
   const [aiSuggestionsVisible, setAiSuggestionsVisible] = useState(false);
   const [protocolStatus, setProtocolStatus] = useState({ text: 'Conferma Protocollazione', icon: 'fa-clipboard-check', loading: false, error: false, success: false });
   const [isSynthesizingAll, setIsSynthesizingAll] = useState(false);
+  const [parserStatus, setParserStatus] = useState('loading'); // 'loading', 'found', 'not_found'
 
   const analysisResults = state.analysisResults[emailId] || {};
 
@@ -119,17 +141,17 @@ function EmailDetailsPanel({ emailId, style }) {
     });
 
     try {
-      await fetchParsedMessage(emailId, activeRequests.current.signal).catch(() => { });
-      await abortableWait(Math.random() * 2500 + 2000, activeRequests.current.signal);
+      // Refresh the analyzed results forcing a re-fetch of the parsing if supported
+      const parsed = await fetchParsedMessage(emailId, activeRequests.current.signal);
 
       if (!isMounted.current) return;
 
       const allResults = {};
-      attachments.forEach(att => {
-        if (SUPPORTED_FILE_TYPES.has(att.fileType)) {
-          allResults[att.id] = MOCK_ANALYSIS_TEXTS[att.filename] || 'Analisi completata: il documento è stato letto.';
-        }
-      });
+      if (parsed && parsed.attachment_analyses) {
+        parsed.attachment_analyses.forEach(att_data => {
+          allResults[att_data.attachment_id] = att_data.analysis_result || 'Analisi completata.';
+        });
+      }
 
       dispatch({
         type: 'UPDATE_ANALYSIS_RESULTS',
@@ -150,12 +172,18 @@ function EmailDetailsPanel({ emailId, style }) {
     });
 
     try {
-      await fetchParsedMessage(emailId, activeRequests.current.signal).catch(() => { });
-      await abortableWait(Math.random() * 1200 + 800, activeRequests.current.signal);
+      const parsed = await fetchParsedMessage(emailId, activeRequests.current.signal);
 
       if (!isMounted.current) return;
 
-      const resultText = MOCK_ANALYSIS_TEXTS[filename] || 'Analisi completata: il documento è stato letto.';
+      let resultText = 'Analisi in corso / non disponibile.';
+      if (parsed && parsed.attachment_analyses) {
+        const match = parsed.attachment_analyses.find(a => String(a.attachment_id) === String(attachmentId));
+        if (match && match.analysis_result) {
+          resultText = match.analysis_result;
+        }
+      }
+
       dispatch({
         type: 'UPDATE_ANALYSIS_RESULTS',
         payload: { emailId, results: { [attachmentId]: resultText } }
@@ -170,19 +198,9 @@ function EmailDetailsPanel({ emailId, style }) {
     setAiSuggestionsLoading(true);
 
     try {
-      const supportedAttachments = attachments.filter(att => SUPPORTED_FILE_TYPES.has(att.fileType));
-      const allSupportedAreDone = supportedAttachments.every(att => analysisResults[att.id]);
-
-      if (!allSupportedAreDone) {
-        await handleAnalyzeAll();
-      }
-
       if (!isMounted.current) return;
 
       dispatch({ type: 'MARK_AS_ANALYZED', payload: emailId });
-
-      await fetchParsedMessage(emailId, activeRequests.current.signal).catch(() => { });
-      await abortableWait(Math.random() * 3500 + 1500, activeRequests.current.signal);
 
       if (isMounted.current) {
         setAiSuggestionsLoading(false);
@@ -211,7 +229,7 @@ function EmailDetailsPanel({ emailId, style }) {
     setProtocolStatus({ text: 'Protocollazione in corso...', icon: 'fa-spinner fa-spin', loading: true, error: false, success: false });
 
     try {
-      await abortableWait(Math.random() * 1500 + 1000, activeRequests.current.signal);
+      await new Promise(r => setTimeout(r, 1500));
       if (isMounted.current) {
         setProtocolStatus({ text: '✓ Email Protocollata', icon: 'fa-check', loading: false, error: false, success: true });
         dispatch({ type: 'PROTOCOL_EMAIL', payload: emailId });
