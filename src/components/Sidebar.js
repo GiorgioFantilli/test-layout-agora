@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAppContext } from "../AppContext";
-import { fetchEmailAccounts } from "../services/api";
+import { fetchEmailAccounts, fetchMessageCount } from "../services/api";
 
 function Sidebar() {
   const { state, dispatch } = useAppContext();
@@ -48,14 +48,26 @@ function Sidebar() {
   const remainingCount =
     emailAccounts.length > 2 ? emailAccounts.length - 2 : 0;
 
-  const allEmails = Object.entries(state.emails);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [processedCount, setProcessedCount] = useState(0);
 
-  const pendingCount = allEmails
-    .filter(([id, email]) => email.status === 'pending' || email.status === 'analyzed')
-    .length;
-  const processedCount = allEmails
-    .filter(([id, email]) => email.status === 'processed')
-    .length;
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetchMessageCount(controller.signal, ["READY_TO_PARSE"])
+      .then((data) => setPendingCount(data))
+      .catch((err) => {
+        if (err.name !== "AbortError") console.error(err);
+      });
+    // TODO: cambiare nello stato "protocollato"
+    fetchMessageCount(controller.signal, ["processed"])
+      .then((data) => setProcessedCount(data))
+      .catch((err) => {
+        if (err.name !== "AbortError") console.error(err);
+      });
+
+    return () => controller.abort();
+  }, [state.emails]);
 
   return (
     <aside className="sidebar">
@@ -253,13 +265,13 @@ function Sidebar() {
             <span className="user-stack-text">
               {emailAccounts.length > 0
                 ? emailAccounts.map((a, i) => (
-                  <React.Fragment key={a.id || i}>
-                    {a.address}
-                    {i < emailAccounts.length - 1 && (
-                      <span className="text-muted"> – </span>
-                    )}
-                  </React.Fragment>
-                ))
+                    <React.Fragment key={a.id || i}>
+                      {a.address}
+                      {i < emailAccounts.length - 1 && (
+                        <span className="text-muted"> – </span>
+                      )}
+                    </React.Fragment>
+                  ))
                 : "Caricamento..."}
             </span>
           </div>

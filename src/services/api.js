@@ -166,3 +166,34 @@ export const fetchMessageDetails = async (messageId, signal) => {
     throw error;
   }
 };
+
+/**
+ * Fetch total count of messages, optionally with a status filter.
+ */
+export const fetchMessageCount = async (signal, statuses = []) => {
+  try {
+    let url = `${POLLER_API_BASE}/messages/count`;
+    if (statuses && statuses.length > 0) {
+      statuses.forEach((st, idx) => {
+        url += `${idx === 0 ? '?' : '&'}status_filter=${encodeURIComponent(st)}`;
+      });
+    }
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Tenant-Code": "default",
+      },
+      signal,
+    });
+    if (!response.ok) {
+      throw new Error(`Error fetching message count: ${response.statusText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    if (error.name !== "AbortError") {
+      console.error("Failed to fetch message count", error);
+    }
+    throw error;
+  }
+};
