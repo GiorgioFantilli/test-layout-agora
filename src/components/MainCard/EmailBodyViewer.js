@@ -39,7 +39,7 @@ function EmailBodyViewer({ htmlContent, textContent }) {
           border: 'none',
           overflow: 'hidden',
           minHeight: '45vh',
-          backgroundColor: 'white',
+          backgroundColor: 'transparent',
           borderRadius: '10px'
         }}
         sandbox="allow-popups allow-popups-to-escape-sandbox"

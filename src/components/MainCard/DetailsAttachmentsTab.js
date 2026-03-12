@@ -84,9 +84,9 @@ function DetailsAttachmentsTab({
       {/* Corpo del Messaggio */}
       <div className="message-body-card">
         <div className="email-body-content" style={{ backgroundColor: 'white' }}>
-          <EmailBodyViewer 
-            htmlContent={email.body_html} 
-            textContent={email.body || email.body_text} 
+          <EmailBodyViewer
+            htmlContent={email.body_html}
+            textContent={email.body || email.body_text}
           />
         </div>
       </div>
@@ -119,9 +119,9 @@ function DetailsAttachmentsTab({
           </div>
         </div>
       ) : (
-        <div style={{ marginBottom: "1.5rem" }}>
+        <div style={{ marginBottom: "1.5rem" }} className="attachments-section">
           <h3 className="subheading">
-            <i className="fas fa-paperclip"></i>Allegati (0)
+            <i className="fas fa-paperclip mr-2"></i>Allegati (0)
           </h3>
           <div className="info-box">
             <p>Nessun allegato presente in questa email.</p>

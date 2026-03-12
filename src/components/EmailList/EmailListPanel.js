@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useAppContext } from '../../AppContext';
 import EmailItem from './EmailItem';
 import { useMessages } from '../../hooks/useEmails';
+import { fetchEmailAccounts } from '../../services/api';
 import { BACKEND_STATUS, FRONTEND_STATUS } from '../../services/dtoMappers';
 
 // Sentinel component that triggers an action when it enters the viewport
@@ -41,6 +42,12 @@ function EmailListPanel() {
   const [skipProcessed, setSkipProcessed] = useState(0);
   const [hasMorePending, setHasMorePending] = useState(true);
   const [hasMoreProcessed, setHasMoreProcessed] = useState(true);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [emailAccounts, setEmailAccounts] = useState([]);
+
+  useEffect(() => {
+    fetchEmailAccounts().then(setEmailAccounts).catch(console.error);
+  }, []);
 
   const isPendingView = state.currentView === 'pending';
   const currentSkip = isPendingView ? skipPending : skipProcessed;
@@ -48,7 +55,7 @@ function EmailListPanel() {
     ? [BACKEND_STATUS.PERSISTED]
     : [BACKEND_STATUS.PROCESSED];
 
-  const { data: fetchedEmails, isFetching } = useMessages(limit, currentSkip, currentStatuses);
+  const { data: fetchedEmails, isFetching, refetch } = useMessages(limit, currentSkip, currentStatuses);
 
   useEffect(() => {
     if (fetchedEmails && Object.keys(fetchedEmails).length > 0) {
@@ -83,10 +90,16 @@ function EmailListPanel() {
   const allEmails = Object.entries(state.emails);
 
   const pendingEmails = allEmails
-    .filter(([id, email]) => email.status === FRONTEND_STATUS.PENDING || email.status === FRONTEND_STATUS.ANALYZED);
+    .filter(([id, email]) =>
+      (email.status === FRONTEND_STATUS.PENDING || email.status === FRONTEND_STATUS.ANALYZED) &&
+      (state.selectedAccountId === null || email.account_id === state.selectedAccountId)
+    );
 
   const processedEmails = allEmails
-    .filter(([id, email]) => email.status === FRONTEND_STATUS.PROCESSED);
+    .filter(([id, email]) =>
+      email.status === FRONTEND_STATUS.PROCESSED &&
+      (state.selectedAccountId === null || email.account_id === state.selectedAccountId)
+    );
 
   const subheadText = state.currentView === 'pending' ? 'Da Protocollare' : 'Protocollate';
 
@@ -100,7 +113,16 @@ function EmailListPanel() {
         <div className="list-main-header">
           <h2 className="list-main-title">Posta in arrivo</h2>
           <span className="list-main-subhead">{subheadText}</span>
+          <div className="header-right-actions">
+            <button className="header-action-btn" title="Cerca" onClick={() => console.log("Search clicked")}>
+              <i className="fas fa-search"></i>
+            </button>
+            <button className="header-action-btn" title="Aggiorna" onClick={() => refetch()} disabled={isFetching}>
+              <i className={`fas fa-sync-alt ${isFetching ? 'fa-spin' : ''}`}></i>
+            </button>
+          </div>
         </div>
+
 
         {state.currentView === 'pending' ? (
           <div id="pending-section">
@@ -140,7 +162,7 @@ function EmailListPanel() {
             </div>
           </div>
         )}
-      </div>
+      </div >
     </>
   );
 }

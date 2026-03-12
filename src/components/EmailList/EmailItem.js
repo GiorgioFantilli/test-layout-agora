@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../../AppContext';
 import { formatEmailDateTime } from '../../utils/dateUtils';
 import { useParsedMessage } from '../../hooks/useEmails';
+import UserIcon from '../UserIcon';
 
 function EmailItem({ emailId, email, onSelect, isSelected }) {
-  const { dispatch } = useAppContext();
+  const { state, dispatch } = useAppContext();
   const [isLoading, setIsLoading] = useState(false);
   const isMounted = useRef(true);
 
@@ -89,8 +90,13 @@ function EmailItem({ emailId, email, onSelect, isSelected }) {
       <div className="email-item-content">
         <div className="email-item-main">
           <div className="email-sender">
-            <span className="sender-name">{email.sender}</span>
+            <div className="flex items-center gap-2">
+              <span className="sender-name">{email.sender}</span>
+            </div>
             <span className="sender-email">{email.email}</span>
+            {state.selectedAccountId === null && email.recipient && (
+              <UserIcon email={email.recipient} size="xs" />
+            )}
           </div>
           <p className="email-subject">{email.subject}</p>
           {bodyPreview.trim().length > 0 ? (

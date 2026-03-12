@@ -42,8 +42,13 @@ function ProtocolTab({
           </div>
         </div>
       ) : (
-        <div className="info-box" style={{ marginBottom: "1.5rem" }}>
-          <p>Questa email non contiene allegati da protocollare.</p>
+        <div className="attachments-section">
+          <div className="attachments-header">
+            <h5>
+              <i className="fas fa-paperclip mr-2"></i>
+              Questa email non contiene allegati da protocollare.
+            </h5>
+          </div>
         </div>
       )}
 

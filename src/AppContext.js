@@ -13,13 +13,15 @@ const initialState = {
     theme: localStorage.getItem('theme') || 'light',
     analysisResults: {},
     selectedEmailData: null,
+    selectedAccountId: null,
+    forceShowAccountSelection: true,
 };
 
 // Reducer to manage actions
 function appReducer(state, action) {
     switch (action.type) {
         case 'SWITCH_VIEW':
-            return { ...state, currentView: action.payload, isFullscreen: false };
+            return { ...state, currentView: action.payload, isFullscreen: false, selectedAccountId: null };
 
         case 'SELECT_EMAIL':
             return {
@@ -33,6 +35,9 @@ function appReducer(state, action) {
             return { ...state, selectedEmailId: null, selectedEmailData: null, isFullscreen: false };
         case 'SET_SELECTED_EMAIL_DATA':
             return { ...state, selectedEmailData: action.payload };
+
+        case 'SET_ACCOUNT_FILTER':
+            return { ...state, selectedAccountId: action.payload };
         case 'TOGGLE_FULLSCREEN':
             return { ...state, isFullscreen: !state.isFullscreen };
         case 'SET_THEME':
