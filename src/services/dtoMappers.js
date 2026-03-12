@@ -59,6 +59,64 @@ export const transformAttachmentDto = (att) => ({
 });
 
 /**
+ * Parses the "from" address to extract the sender and email.
+ */
+const parseFromAddress = (fromAddr) => {
+  if (!fromAddr) {
+    return { sender: 'Sconosciuto', email: '' };
+  }
+
+  const emailMatch = fromAddr.match(/<[^>]+>/);
+
+  let email = '';
+  let sender = '';
+
+  if (emailMatch) {
+    email = emailMatch[0].trim();
+    sender = fromAddr.replace(email, '').replace(/["\\]/g, '').trim();
+  } else {
+    const cleanEmail = fromAddr.replace(/["\\]/g, '').trim();
+    email = `<${cleanEmail}>`;
+    sender = '';
+  }
+
+  return {
+    sender: sender || 'Sconosciuto',
+    email: email
+  };
+};
+
+/**
+ * Decodes a MIME subject string.
+ */
+const decodeMimeSubject = (subject) => {
+  if (!subject) return '';
+
+  let cleanedSubject = subject.replace(/\?=\s+=\?/g, '?==?');
+
+  const mimeRegex = /=\?([^?]+)\?([BbQq])\?([^?]+)\?=/gi;
+
+  return cleanedSubject.replace(mimeRegex, (match, charset, encoding, text) => {
+    try {
+      if (encoding.toUpperCase() === 'Q') {
+        let qText = text.replace(/_/g, ' ');
+        qText = qText.replace(/=([A-Fa-f0-9]{2})/g, '%$1');
+        return decodeURIComponent(qText);
+      }
+
+      if (encoding.toUpperCase() === 'B') {
+        return decodeURIComponent(escape(atob(text)));
+      }
+    } catch (e) {
+      console.error("Errore nella decodifica dell'oggetto:", e);
+      return match;
+    }
+
+    return match;
+  });
+};
+
+/**
  * Transforms a backend MessageRead DTO into the format expected by the frontend.
  */
 export const transformMessageDto = (msg) => {
@@ -70,9 +128,9 @@ export const transformMessageDto = (msg) => {
 
   return {
     id: msg.id,
-    sender: msg.from_addr || "Sconosciuto",
-    email: msg.from_addr || "",
-    subject: msg.subject || "Nessun Oggetto",
+    sender: parseFromAddress(msg.from_addr).sender,
+    email: parseFromAddress(msg.from_addr).email,
+    subject: decodeMimeSubject(msg.subject) || "Nessun Oggetto",
     body: "",
     date: msg.msg_date,
     recipient: msg.account?.address || "Sconosciuto",
