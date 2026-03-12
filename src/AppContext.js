@@ -12,6 +12,7 @@ const initialState = {
     config: defaultConfig,
     theme: localStorage.getItem('theme') || 'light',
     analysisResults: {},
+    selectedEmailData: null,
 };
 
 // Reducer to manage actions
@@ -24,11 +25,14 @@ function appReducer(state, action) {
             return {
                 ...state,
                 selectedEmailId: action.payload,
+                selectedEmailData: null,
                 isFullscreen: false,
             };
 
         case 'CLOSE_EMAIL':
-            return { ...state, selectedEmailId: null, isFullscreen: false };
+            return { ...state, selectedEmailId: null, selectedEmailData: null, isFullscreen: false };
+        case 'SET_SELECTED_EMAIL_DATA':
+            return { ...state, selectedEmailData: action.payload };
         case 'TOGGLE_FULLSCREEN':
             return { ...state, isFullscreen: !state.isFullscreen };
         case 'SET_THEME':
@@ -77,6 +81,21 @@ function appReducer(state, action) {
             return {
                 ...state,
                 emails: action.payload,
+            };
+
+        case 'UPDATE_EMAIL_BODY':
+            const { id: eId, body: eBody } = action.payload;
+            if (state.emails[eId] && state.emails[eId].body) return state;
+
+            return {
+                ...state,
+                emails: {
+                    ...state.emails,
+                    [eId]: {
+                        ...state.emails[eId],
+                        body: eBody
+                    }
+                }
             };
 
         case 'APPEND_EMAILS':

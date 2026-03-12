@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useAppContext } from '../../AppContext';
 import EmailItem from './EmailItem';
-import { fetchMessages } from '../../services/api';
+import { useMessages } from '../../hooks/useEmails';
 import { BACKEND_STATUS, FRONTEND_STATUS } from '../../services/dtoMappers';
 
 // Sentinel component that triggers an action when it enters the viewport
@@ -35,68 +35,61 @@ function Sentinel({ onVisible, hasMore, isLoading }) {
 
 function EmailListPanel() {
   const { state, dispatch } = useAppContext();
+  const limit = 20;
 
-  // Pagination cursors mapped by group name
-  const pagRef = useRef({
-    pending: { skip: 0, hasMore: true, isLoading: false, statuses: [BACKEND_STATUS.PERSISTED] },
-    processed: { skip: 0, hasMore: true, isLoading: false, statuses: [BACKEND_STATUS.PROCESSED] }
-  });
+  const [skipPending, setSkipPending] = useState(0);
+  const [skipProcessed, setSkipProcessed] = useState(0);
+  const [hasMorePending, setHasMorePending] = useState(true);
+  const [hasMoreProcessed, setHasMoreProcessed] = useState(true);
 
-  const [, forceRender] = useState({});
+  const isPendingView = state.currentView === 'pending';
+  const currentSkip = isPendingView ? skipPending : skipProcessed;
+  const currentStatuses = isPendingView
+    ? [BACKEND_STATUS.PERSISTED]
+    : [BACKEND_STATUS.PROCESSED];
 
-  const loadMore = useCallback(async (group) => {
-    const pagState = pagRef.current[group];
-    if (pagState.isLoading || !pagState.hasMore) return;
+  const { data: fetchedEmails, isFetching } = useMessages(limit, currentSkip, currentStatuses);
 
-    pagState.isLoading = true;
-    forceRender({});
-
-    try {
-      const limit = 20;
-      const newEmails = await fetchMessages(null, limit, pagState.skip, pagState.statuses);
-      const count = Object.keys(newEmails).length;
-
-      dispatch({ type: 'APPEND_EMAILS', payload: newEmails });
-
-      pagState.skip += count;
-      pagState.hasMore = count === limit;
-    } catch (err) {
-      console.error(`Error fetching more emails for ${group}`, err);
-    } finally {
-      pagState.isLoading = false;
-      forceRender({});
-    }
-  }, [dispatch]);
-
-  // Initial load logic based on view
   useEffect(() => {
-    if (state.currentView === 'pending') {
-      if (pagRef.current.pending.skip === 0) loadMore('pending');
-    } else if (state.currentView === 'processed') {
-      if (pagRef.current.processed.skip === 0) loadMore('processed');
-    }
-  }, [state.currentView, loadMore]);
+    if (fetchedEmails && Object.keys(fetchedEmails).length > 0) {
+      const count = Object.keys(fetchedEmails).length;
 
+      if (isPendingView) {
+        setHasMorePending(count === limit);
+      } else {
+        setHasMoreProcessed(count === limit);
+      }
+
+      dispatch({ type: 'APPEND_EMAILS', payload: fetchedEmails });
+    }
+  }, [fetchedEmails, isPendingView, dispatch, limit]);
+
+  const loadMore = useCallback(() => {
+    if (isFetching) return;
+
+    if (isPendingView && hasMorePending) {
+      setSkipPending((prev) => prev + limit);
+    } else if (!isPendingView && hasMoreProcessed) {
+      setSkipProcessed((prev) => prev + limit);
+    }
+  }, [isFetching, isPendingView, hasMorePending, hasMoreProcessed]);
 
   const handleSelectEmail = (emailId) => {
     dispatch({ type: 'SELECT_EMAIL', payload: emailId });
   };
 
-  // Filter emails based on the current view mapping locally
+
+
   const allEmails = Object.entries(state.emails);
 
   const pendingEmails = allEmails
-    .filter(([id, email]) => email.status === FRONTEND_STATUS.PENDING || email.status === FRONTEND_STATUS.ANALYZED)
-    .sort(([idA, emailA], [idB, emailB]) => {
-      const dateA = emailA.date ? new Date(emailA.date).getTime() : 0;
-      const dateB = emailB.date ? new Date(emailB.date).getTime() : 0;
-      return dateB - dateA;
-    });
+    .filter(([id, email]) => email.status === FRONTEND_STATUS.PENDING || email.status === FRONTEND_STATUS.ANALYZED);
 
   const processedEmails = allEmails
     .filter(([id, email]) => email.status === FRONTEND_STATUS.PROCESSED);
 
   const subheadText = state.currentView === 'pending' ? 'Da Protocollare' : 'Protocollate';
+
 
   return (
     <>
@@ -121,11 +114,7 @@ function EmailListPanel() {
                   isSelected={state.selectedEmailId === id}
                 />
               ))}
-              <Sentinel
-                hasMore={pagRef.current.pending.hasMore}
-                isLoading={pagRef.current.pending.isLoading}
-                onVisible={() => loadMore('pending')}
-              />
+              <Sentinel hasMore={hasMorePending} isLoading={isFetching} onVisible={loadMore} />
             </div>
           </div>
         ) : (
@@ -147,11 +136,7 @@ function EmailListPanel() {
                     isSelected={state.selectedEmailId === id}
                   />
                 ))}
-              <Sentinel
-                hasMore={pagRef.current.processed.hasMore}
-                isLoading={pagRef.current.processed.isLoading}
-                onVisible={() => loadMore('processed')}
-              />
+              <Sentinel hasMore={hasMoreProcessed} isLoading={isFetching} onVisible={loadMore} />
             </div>
           </div>
         )}

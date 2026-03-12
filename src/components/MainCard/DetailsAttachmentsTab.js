@@ -2,6 +2,7 @@ import React from "react";
 import AiButton from "./AiButton";
 import AttachmentItem from "./AttachmentItem";
 import { formatEmailDateTime } from "../../utils/dateUtils";
+import EmailBodyViewer from "./EmailBodyViewer";
 
 function DetailsAttachmentsTab({
   email,
@@ -82,14 +83,11 @@ function DetailsAttachmentsTab({
 
       {/* Corpo del Messaggio */}
       <div className="message-body-card">
-        <div className="email-body-content">
-          {email.body_html ? (
-            <div dangerouslySetInnerHTML={{ __html: email.body_html }} />
-          ) : (
-            <span style={{ whiteSpace: "pre-wrap" }}>
-              {email.body || email.body_text || "Nessun contenuto"}
-            </span>
-          )}
+        <div className="email-body-content" style={{ backgroundColor: 'white' }}>
+          <EmailBodyViewer 
+            htmlContent={email.body_html} 
+            textContent={email.body || email.body_text} 
+          />
         </div>
       </div>
 

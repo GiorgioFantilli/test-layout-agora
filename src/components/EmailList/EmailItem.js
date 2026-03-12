@@ -1,11 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../../AppContext';
 import { formatEmailDateTime } from '../../utils/dateUtils';
+import { useParsedMessage } from '../../hooks/useEmails';
 
 function EmailItem({ emailId, email, onSelect, isSelected }) {
   const { dispatch } = useAppContext();
   const [isLoading, setIsLoading] = useState(false);
   const isMounted = useRef(true);
+
+  const { data: parsedData } = useParsedMessage(emailId);
+
+  useEffect(() => {
+    if (parsedData && parsedData.body_text && !email.body) {
+      dispatch({
+        type: 'UPDATE_EMAIL_BODY',
+        payload: { id: emailId, body: parsedData.body_text }
+      });
+    }
+  }, [parsedData, emailId, email.body, dispatch]);
 
   useEffect(() => {
     return () => {
@@ -81,7 +93,11 @@ function EmailItem({ emailId, email, onSelect, isSelected }) {
             <span className="sender-email">{email.email}</span>
           </div>
           <p className="email-subject">{email.subject}</p>
-          {bodyPreview.length > 0 && <p className="email-body-preview">{bodyPreview}</p>}
+          {bodyPreview.trim().length > 0 ? (
+            <p className="email-body-preview">{bodyPreview}</p>
+          ) : (
+            <p className="email-body-preview"><em>Nessun corpo mail</em></p>
+          )}
         </div>
         <div className="email-item-aside">
           {/* 1. Data e Ora */}
