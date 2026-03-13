@@ -82,7 +82,12 @@ function EmailListPanel() {
     data: fetchedEmails,
     isFetching,
     refetch,
-  } = useMessages(limit, currentSkip, currentStatuses, state.selectedAccountId);
+  } = useMessages(
+    limit,
+    currentSkip,
+    currentStatuses,
+    state.selectedAccountIds,
+  );
 
   useEffect(() => {
     // Reset pagination when account filter changes
@@ -90,7 +95,7 @@ function EmailListPanel() {
     setSkipProcessed(0);
     setHasMorePending(true);
     setHasMoreProcessed(true);
-  }, [state.selectedAccountId]);
+  }, [state.selectedAccountIds]);
 
   useEffect(() => {
     if (fetchedEmails) {
@@ -132,15 +137,19 @@ function EmailListPanel() {
     ([id, email]) =>
       (email.status === FRONTEND_STATUS.PENDING ||
         email.status === FRONTEND_STATUS.ANALYZED) &&
-      (state.selectedAccountId === null ||
-        String(email.account_id) === String(state.selectedAccountId)),
+      (state.selectedAccountIds.length === 0 ||
+        state.selectedAccountIds.some(
+          (aid) => String(aid) === String(email.account_id),
+        )),
   );
 
   const processedEmails = allEmails.filter(
     ([id, email]) =>
       email.status === FRONTEND_STATUS.PROCESSED &&
-      (state.selectedAccountId === null ||
-        String(email.account_id) === String(state.selectedAccountId)),
+      (state.selectedAccountIds.length === 0 ||
+        state.selectedAccountIds.some(
+          (aid) => String(aid) === String(email.account_id),
+        )),
   );
 
   const subheadText =

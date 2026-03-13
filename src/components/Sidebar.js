@@ -19,6 +19,24 @@ function Sidebar() {
     dispatch({ type: "SWITCH_VIEW", payload: view });
   };
 
+  const handleAccountToggle = (accountId) => {
+    const { selectedAccountIds } = state;
+    if (selectedAccountIds.length === 0) {
+      // Da "tutte" → seleziona solo questa
+      dispatch({ type: "SET_ACCOUNT_FILTER", payload: [accountId] });
+    } else if (selectedAccountIds.includes(accountId)) {
+      // Rimuovi questa; se era l'ultima → torna a "tutte"
+      const newIds = selectedAccountIds.filter((id) => id !== accountId);
+      dispatch({ type: "SET_ACCOUNT_FILTER", payload: newIds });
+    } else {
+      // Aggiungi questa alla selezione
+      dispatch({
+type: "SET_ACCOUNT_FILTER",
+payload: [...selectedAccountIds, accountId],
+});
+    }
+  };
+
   const [emailAccounts, setEmailAccounts] = useState([]);
 
   useEffect(() => {
@@ -107,29 +125,34 @@ function Sidebar() {
 
             {state.currentView === "pending" && showAccountSelection && (
               <div className="account-list-drawer">
-                <button
-                  className={`account-list-item ${state.selectedAccountId === null ? "active" : ""}`}
-                  onClick={() =>
-                    dispatch({ type: "SET_ACCOUNT_FILTER", payload: null })
+                <label
+                  className={`account-list-item ${state.selectedAccountIds.length === 0 ? "active" : ""}`}
+                  >
+                  <input
+                    type="checkbox"
+                    className="account-checkbox"
+                    checked={state.selectedAccountIds.length === 0}
+                    onChange={() =>
+                    dispatch({ type: "SET_ACCOUNT_FILTER", payload: [] })
                   }
-                >
+/>
                   <i className="fas fa-layer-group"></i>
                   <span>Tutte le PEC</span>
-                </button>
+                </label>
                 {emailAccounts.map((account) => (
-                  <button
+                  <label
                     key={account.id}
-                    className={`account-list-item ${state.selectedAccountId === account.id ? "active" : ""}`}
-                    onClick={() =>
-                      dispatch({
-                        type: "SET_ACCOUNT_FILTER",
-                        payload: account.id,
-                      })
-                    }
+                    className={`account-list-item ${state.selectedAccountIds.includes(account.id) ? "active" : ""}`}
                   >
+                    <input
+                      type="checkbox"
+                      className="account-checkbox"
+                      checked={state.selectedAccountIds.includes(account.id)}
+                      onChange={() => handleAccountToggle(account.id)}
+                    />
                     <UserIcon email={account.address} size="sm" />
                     <span>{account.address}</span>
-                  </button>
+                  </label>
                 ))}
               </div>
             )}
@@ -157,29 +180,34 @@ function Sidebar() {
 
             {state.currentView === "processed" && showAccountSelection && (
               <div className="account-list-drawer">
-                <button
-                  className={`account-list-item ${state.selectedAccountId === null ? "active" : ""}`}
-                  onClick={() =>
-                    dispatch({ type: "SET_ACCOUNT_FILTER", payload: null })
+                <label
+                  className={`account-list-item ${state.selectedAccountIds.length === 0 ? "active" : ""}`}
+                  >
+                  <input
+                    type="checkbox"
+                    className="account-checkbox"
+                    checked={state.selectedAccountIds.length === 0}
+                    onChange={() =>
+                    dispatch({ type: "SET_ACCOUNT_FILTER", payload: [] })
                   }
-                >
+/>
                   <i className="fas fa-layer-group"></i>
                   <span>Tutte le PEC</span>
-                </button>
+                </label>
                 {emailAccounts.map((account) => (
-                  <button
+                  <label
                     key={account.id}
-                    className={`account-list-item ${state.selectedAccountId === account.id ? "active" : ""}`}
-                    onClick={() =>
-                      dispatch({
-                        type: "SET_ACCOUNT_FILTER",
-                        payload: account.id,
-                      })
-                    }
+                    className={`account-list-item ${state.selectedAccountIds.includes(account.id) ? "active" : ""}`}
                   >
+                    <input
+                      type="checkbox"
+                      className="account-checkbox"
+                      checked={state.selectedAccountIds.includes(account.id)}
+                      onChange={() => handleAccountToggle(account.id)}
+                    />
                     <UserIcon email={account.address} size="sm" />
                     <span>{account.address}</span>
-                  </button>
+                  </label>
                 ))}
               </div>
             )}

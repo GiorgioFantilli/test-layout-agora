@@ -12,14 +12,14 @@ export const useMessages = (
   limit = 50,
   skip = 0,
   statuses = [],
-  accountId = null,
+  accountIds = [],
   options = {},
 ) => {
   return useQuery({
-    queryKey: ["messages", { limit, skip, statuses, accountId }],
+    queryKey: ["messages", { limit, skip, statuses, accountIds }],
 
     queryFn: ({ signal }) =>
-      fetchMessages(signal, limit, skip, statuses, accountId),
+      fetchMessages(signal, limit, skip, statuses, accountIds),
 
     refetchInterval: 10000,
     refetchOnWindowFocus: true,
