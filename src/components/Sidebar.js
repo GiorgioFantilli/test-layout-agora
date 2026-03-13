@@ -2,9 +2,12 @@ import React, { useState, useEffect } from "react";
 import { useAppContext } from "../AppContext";
 import { fetchEmailAccounts, fetchMessageCount } from "../services/api";
 import UserIcon from "./UserIcon";
+import { useSession, useLogout } from "../hooks/useAuth";
 
 function Sidebar() {
   const { state, dispatch } = useAppContext();
+  const { data: user } = useSession();
+  const logoutMutation = useLogout();
 
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
@@ -35,7 +38,6 @@ function Sidebar() {
     return () => controller.abort();
   }, []);
 
-
   const visibleAccounts = emailAccounts.slice(0, 2);
   const remainingCount =
     emailAccounts.length > 2 ? emailAccounts.length - 2 : 0;
@@ -61,7 +63,8 @@ function Sidebar() {
     return () => controller.abort();
   }, [state.emails]);
 
-  const showAccountSelection = emailAccounts.length > 1 || state.forceShowAccountSelection;
+  const showAccountSelection =
+    emailAccounts.length > 1 || state.forceShowAccountSelection;
 
   return (
     <aside className="sidebar">
@@ -95,7 +98,9 @@ function Sidebar() {
               <div className="mr-0 flex items-center gap-2">
                 <span className="nav-item-badge">{pendingCount}</span>
                 {showAccountSelection && (
-                  <i className={`fas fa-chevron-down filter-chevron ${state.currentView === "pending" ? "open" : ""}`}></i>
+                  <i
+                    className={`fas fa-chevron-down filter-chevron ${state.currentView === "pending" ? "open" : ""}`}
+                  ></i>
                 )}
               </div>
             </button>
@@ -104,7 +109,9 @@ function Sidebar() {
               <div className="account-list-drawer">
                 <button
                   className={`account-list-item ${state.selectedAccountId === null ? "active" : ""}`}
-                  onClick={() => dispatch({ type: "SET_ACCOUNT_FILTER", payload: null })}
+                  onClick={() =>
+                    dispatch({ type: "SET_ACCOUNT_FILTER", payload: null })
+                  }
                 >
                   <i className="fas fa-layer-group"></i>
                   <span>Tutte le PEC</span>
@@ -113,7 +120,12 @@ function Sidebar() {
                   <button
                     key={account.id}
                     className={`account-list-item ${state.selectedAccountId === account.id ? "active" : ""}`}
-                    onClick={() => dispatch({ type: "SET_ACCOUNT_FILTER", payload: account.id })}
+                    onClick={() =>
+                      dispatch({
+                        type: "SET_ACCOUNT_FILTER",
+                        payload: account.id,
+                      })
+                    }
                   >
                     <UserIcon email={account.address} size="sm" />
                     <span>{account.address}</span>
@@ -136,7 +148,9 @@ function Sidebar() {
               <div className="mr-[0] flex items-center gap-2">
                 <span className="nav-item-badge">{processedCount}</span>
                 {showAccountSelection && (
-                  <i className={`fas fa-chevron-down filter-chevron ${state.currentView === "processed" ? "open" : ""}`}></i>
+                  <i
+                    className={`fas fa-chevron-down filter-chevron ${state.currentView === "processed" ? "open" : ""}`}
+                  ></i>
                 )}
               </div>
             </button>
@@ -145,7 +159,9 @@ function Sidebar() {
               <div className="account-list-drawer">
                 <button
                   className={`account-list-item ${state.selectedAccountId === null ? "active" : ""}`}
-                  onClick={() => dispatch({ type: "SET_ACCOUNT_FILTER", payload: null })}
+                  onClick={() =>
+                    dispatch({ type: "SET_ACCOUNT_FILTER", payload: null })
+                  }
                 >
                   <i className="fas fa-layer-group"></i>
                   <span>Tutte le PEC</span>
@@ -154,7 +170,12 @@ function Sidebar() {
                   <button
                     key={account.id}
                     className={`account-list-item ${state.selectedAccountId === account.id ? "active" : ""}`}
-                    onClick={() => dispatch({ type: "SET_ACCOUNT_FILTER", payload: account.id })}
+                    onClick={() =>
+                      dispatch({
+                        type: "SET_ACCOUNT_FILTER",
+                        payload: account.id,
+                      })
+                    }
                   >
                     <UserIcon email={account.address} size="sm" />
                     <span>{account.address}</span>
@@ -180,7 +201,10 @@ function Sidebar() {
                 />
               ))}
               {remainingCount > 0 && (
-                <div className="user-icon-bubble user-icon-sm ml-[-0.4rem]" style={{ backgroundColor: "#a855f7" }}>
+                <div
+                  className="user-icon-bubble user-icon-sm ml-[-0.4rem]"
+                  style={{ backgroundColor: "#a855f7" }}
+                >
                   <span>+{remainingCount}</span>
                 </div>
               )}
@@ -193,13 +217,13 @@ function Sidebar() {
             <span className="user-stack-text">
               {emailAccounts.length > 0
                 ? emailAccounts.map((a, i) => (
-                  <React.Fragment key={a.id || i}>
-                    {a.address}
-                    {i < emailAccounts.length - 1 && (
-                      <span className="text-muted"> – </span>
-                    )}
-                  </React.Fragment>
-                ))
+                    <React.Fragment key={a.id || i}>
+                      {a.address}
+                      {i < emailAccounts.length - 1 && (
+                        <span className="text-muted"> – </span>
+                      )}
+                    </React.Fragment>
+                  ))
                 : "Caricamento..."}
             </span>
           </div>
@@ -224,7 +248,31 @@ function Sidebar() {
               {state.theme === "light" ? "Tema Chiaro" : "Tema Scuro"}
             </span>
           </button>
+
+          {/* Item 4: Logout */}
+          <button
+            className="user-control-item logout-button"
+            onClick={() => logoutMutation.mutate()}
+            disabled={logoutMutation.isLoading}
+          >
+            <i className="fas fa-sign-out-alt"></i>
+            <span>{logoutMutation.isLoading ? "Esco..." : "Logout"}</span>
+          </button>
         </div>
+
+        {user && (
+          <div className="sidebar-footer-user">
+            <div className="user-avatar-sm">
+              {user.username.charAt(0).toUpperCase()}
+            </div>
+            <div className="user-info-sm">
+              <span className="user-name-sm">
+                {user.full_name || user.username}
+              </span>
+              <span className="user-tenant-sm">{user.tenant_name}</span>
+            </div>
+          </div>
+        )}
       </div>
     </aside>
   );
