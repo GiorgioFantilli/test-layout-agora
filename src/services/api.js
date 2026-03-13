@@ -67,6 +67,7 @@ export const fetchMessages = async (
   limit = 50,
   skip = 0,
   statuses = [],
+  accountId = null,
 ) => {
   try {
     let url = `${POLLER_API_BASE}/messages/?limit=${limit}&skip=${skip}&order_by=desc`;
@@ -74,6 +75,9 @@ export const fetchMessages = async (
       statuses.forEach((st) => {
         url += `&status=${encodeURIComponent(st)}`;
       });
+    }
+    if (accountId) {
+      url += `&account_id=${encodeURIComponent(accountId)}`;
     }
     const response = await fetch(url, {
       method: "GET",
