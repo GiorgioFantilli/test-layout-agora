@@ -15,7 +15,7 @@ const UserIcon = ({ email, size = "md", className = "" }) => {
   const getInitials = (email) => {
     if (!email) return "??";
     const namePart = email.split("@")[0];
-    const parts = namePart.split(/[\.\-_]/);
+    const parts = namePart.split(/[.\-_]/);
     if (parts.length >= 2) {
       return (parts[0][0] + parts[1][0]).toUpperCase();
     }

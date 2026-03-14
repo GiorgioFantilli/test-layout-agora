@@ -13,14 +13,24 @@ export const fetchMessages = async (
   limit = 50,
   skip = 0,
   statuses = [],
+  accountId = null,
+  extraFilters = {},
 ) => {
   try {
     let url = `${POLLER_API_BASE}/messages/?limit=${limit}&skip=${skip}`;
+    if (accountId) {
+      url += `&account_id=${encodeURIComponent(accountId)}`;
+    }
     if (statuses && statuses.length > 0) {
       statuses.forEach((st) => {
         url += `&status=${encodeURIComponent(st)}`;
       });
     }
+    Object.keys(extraFilters).forEach((key) => {
+      if (extraFilters[key] !== undefined && extraFilters[key] !== null) {
+        url += `&${encodeURIComponent(key)}=${encodeURIComponent(extraFilters[key])}`;
+      }
+    });
     const response = await fetch(url, {
       method: "GET",
       headers: {
@@ -33,13 +43,12 @@ export const fetchMessages = async (
       throw new Error(`Error fetching messages: ${response.statusText}`);
     }
     const data = await response.json();
+    const result = data.map((msg) => transformMessageDto(msg));
 
-    const emailsMap = {};
-    data.forEach((msg) => {
-      const transformed = transformMessageDto(msg);
-      emailsMap[transformed.id] = transformed;
-    });
-    return emailsMap;
+    return {
+      result,
+      nextSkip: result.length === limit ? skip + limit : null,
+    };
   } catch (error) {
     if (error.name !== "AbortError") {
       console.error("Failed to fetch messages", error);

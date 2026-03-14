@@ -15,6 +15,8 @@ const initialState = {
     selectedEmailData: null,
     selectedAccountId: null,
     forceShowAccountSelection: true,
+    isSearchOpen: false,
+    searchFilters: {},
 };
 
 // Reducer to manage actions
@@ -111,6 +113,15 @@ function appReducer(state, action) {
                     ...action.payload
                 }
             };
+
+        case 'TOGGLE_SEARCH':
+            return { ...state, isSearchOpen: !state.isSearchOpen };
+        case 'CLOSE_SEARCH':
+            return { ...state, isSearchOpen: false };
+        case 'SET_SEARCH_FILTERS':
+            return { ...state, searchFilters: action.payload, isSearchOpen: false };
+        case 'RESET_SEARCH_FILTERS':
+            return { ...state, searchFilters: {} };
 
         default:
             return state;

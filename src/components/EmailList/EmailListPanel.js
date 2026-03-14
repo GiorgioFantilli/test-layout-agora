@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useAppContext } from '../../AppContext';
 import EmailItem from './EmailItem';
 import { useMessages } from '../../hooks/useEmails';
+import SearchModal from '../SearchModal';
 import { fetchEmailAccounts } from '../../services/api';
 import { BACKEND_STATUS, FRONTEND_STATUS } from '../../services/dtoMappers';
 
@@ -38,48 +39,39 @@ function EmailListPanel() {
   const { state, dispatch } = useAppContext();
   const limit = 20;
 
-  const [skipPending, setSkipPending] = useState(0);
-  const [skipProcessed, setSkipProcessed] = useState(0);
-  const [hasMorePending, setHasMorePending] = useState(true);
-  const [hasMoreProcessed, setHasMoreProcessed] = useState(true);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [emailAccounts, setEmailAccounts] = useState([]);
-
-  useEffect(() => {
-    fetchEmailAccounts().then(setEmailAccounts).catch(console.error);
-  }, []);
-
   const isPendingView = state.currentView === 'pending';
-  const currentSkip = isPendingView ? skipPending : skipProcessed;
   const currentStatuses = isPendingView
     ? [BACKEND_STATUS.PERSISTED]
     : [BACKEND_STATUS.PROCESSED];
 
-  const { data: fetchedEmails, isFetching, refetch } = useMessages(limit, currentSkip, currentStatuses);
 
+  const {
+    data: infiniteData,
+    fetchNextPage,
+    hasNextPage,
+    isFetching,
+    isFetchingNextPage,
+    refetch
+  } = useMessages(limit, currentStatuses, state.selectedAccountId, state.searchFilters);
+
+  // Sync with AppContext to keep state.emails updated for other components
   useEffect(() => {
-    if (fetchedEmails && Object.keys(fetchedEmails).length > 0) {
-      const count = Object.keys(fetchedEmails).length;
-
-      if (isPendingView) {
-        setHasMorePending(count === limit);
-      } else {
-        setHasMoreProcessed(count === limit);
+    if (infiniteData?.pages) {
+      const lastPage = infiniteData.pages[infiniteData.pages.length - 1];
+      if (lastPage?.result) {
+        const emailsMap = {};
+        lastPage.result.forEach(email => {
+          emailsMap[email.id] = email;
+        });
+        dispatch({ type: 'APPEND_EMAILS', payload: emailsMap });
       }
-
-      dispatch({ type: 'APPEND_EMAILS', payload: fetchedEmails });
     }
-  }, [fetchedEmails, isPendingView, dispatch, limit]);
+  }, [infiniteData, dispatch]);
 
   const loadMore = useCallback(() => {
-    if (isFetching) return;
-
-    if (isPendingView && hasMorePending) {
-      setSkipPending((prev) => prev + limit);
-    } else if (!isPendingView && hasMoreProcessed) {
-      setSkipProcessed((prev) => prev + limit);
-    }
-  }, [isFetching, isPendingView, hasMorePending, hasMoreProcessed]);
+    if (isFetching || isFetchingNextPage || !hasNextPage) return;
+    fetchNextPage();
+  }, [isFetching, isFetchingNextPage, hasNextPage, fetchNextPage]);
 
   const handleSelectEmail = (emailId) => {
     dispatch({ type: 'SELECT_EMAIL', payload: emailId });
@@ -114,7 +106,7 @@ function EmailListPanel() {
           <h2 className="list-main-title">Posta in arrivo</h2>
           <span className="list-main-subhead">{subheadText}</span>
           <div className="header-right-actions">
-            <button className="header-action-btn" title="Cerca" onClick={() => console.log("Search clicked")}>
+            <button className="header-action-btn" title="Cerca" onClick={() => dispatch({ type: 'TOGGLE_SEARCH' })}>
               <i className="fas fa-search"></i>
             </button>
             <button className="header-action-btn" title="Aggiorna" onClick={() => refetch()} disabled={isFetching}>
@@ -136,7 +128,7 @@ function EmailListPanel() {
                   isSelected={state.selectedEmailId === id}
                 />
               ))}
-              <Sentinel hasMore={hasMorePending} isLoading={isFetching} onVisible={loadMore} />
+              <Sentinel hasMore={hasNextPage} isLoading={isFetchingNextPage} onVisible={loadMore} />
             </div>
           </div>
         ) : (
@@ -158,10 +150,11 @@ function EmailListPanel() {
                     isSelected={state.selectedEmailId === id}
                   />
                 ))}
-              <Sentinel hasMore={hasMoreProcessed} isLoading={isFetching} onVisible={loadMore} />
+              <Sentinel hasMore={hasNextPage} isLoading={isFetchingNextPage} onVisible={loadMore} />
             </div>
           </div>
         )}
+        <SearchModal />
       </div >
     </>
   );

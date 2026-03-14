@@ -6,7 +6,6 @@ import UserIcon from "./UserIcon";
 function Sidebar() {
   const { state, dispatch } = useAppContext();
 
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   const handleThemeToggle = () => {
     dispatch({ type: "TOGGLE_THEME" });
@@ -88,9 +87,9 @@ function Sidebar() {
               className={`sidebar-nav-item ${state.currentView === "pending" ? "active" : ""}`}
               onClick={() => handleViewChange("pending")}
             >
-              <div className="ml-1 flex items-center">
+              <div className="ml-1 flex items-baseline" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 <i className="fas fa-clock"></i>
-                <span>Da Protocollare</span>
+                <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Da Protocollare</span>
               </div>
               <div className="mr-0 flex items-center gap-2">
                 <span className="nav-item-badge">{pendingCount}</span>
@@ -106,7 +105,9 @@ function Sidebar() {
                   className={`account-list-item ${state.selectedAccountId === null ? "active" : ""}`}
                   onClick={() => dispatch({ type: "SET_ACCOUNT_FILTER", payload: null })}
                 >
-                  <i className="fas fa-layer-group"></i>
+                  <div className="user-icon-bubble user-icon-sm all-accounts-icon">
+                    <i className="fas fa-layer-group"></i>
+                  </div>
                   <span>Tutte le PEC</span>
                 </button>
                 {emailAccounts.map((account) => (
@@ -129,9 +130,9 @@ function Sidebar() {
               className={`sidebar-nav-item ${state.currentView === "processed" ? "active" : ""}`}
               onClick={() => handleViewChange("processed")}
             >
-              <div className="ml-1 flex items-center">
-                <i className="fas fa-check"></i>
-                <span>Protocollate</span>
+              <div className="ml-1 flex items-baseline" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                <i className="fa-solid fa-clipboard-check"></i>
+                <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Protocollate</span>
               </div>
               <div className="mr-[0] flex items-center gap-2">
                 <span className="nav-item-badge">{processedCount}</span>
@@ -147,7 +148,9 @@ function Sidebar() {
                   className={`account-list-item ${state.selectedAccountId === null ? "active" : ""}`}
                   onClick={() => dispatch({ type: "SET_ACCOUNT_FILTER", payload: null })}
                 >
-                  <i className="fas fa-layer-group"></i>
+                  <div className="user-icon-bubble user-icon-sm all-accounts-icon">
+                    <i className="fas fa-layer-group"></i>
+                  </div>
                   <span>Tutte le PEC</span>
                 </button>
                 {emailAccounts.map((account) => (
@@ -165,7 +168,6 @@ function Sidebar() {
           </div>
         </nav>
 
-        <hr className="sidebar-divider" />
 
         <div className="user-controls">
           {/* Item 1: Utenti */}

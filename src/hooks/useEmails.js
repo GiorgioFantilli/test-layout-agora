@@ -1,14 +1,16 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { fetchMessages, fetchParsedMessage, fetchMessageDetails } from '../services/api';
 
 /**
- * Hook for fetching messages with polling support
+ * Hook for fetching messages with polling and infinite scroll support
  */
-export const useMessages = (limit = 50, skip = 0, statuses = [], options = {}) => {
-    return useQuery({
-        queryKey: ['messages', { limit, skip, statuses }],
+export const useMessages = (limit = 50, statuses = [], accountId = null, extraFilters = {}, options = {}) => {
+    return useInfiniteQuery({
+        queryKey: ['messages', { limit, statuses, accountId, extraFilters }],
 
-        queryFn: ({ signal }) => fetchMessages(signal, limit, skip, statuses),
+        queryFn: ({ pageParam = 0, signal }) => fetchMessages(signal, limit, pageParam, statuses, accountId, extraFilters),
+
+        getNextPageParam: (lastPage) => lastPage.nextSkip,
 
         refetchInterval: 10000,
         refetchOnWindowFocus: true,

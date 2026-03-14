@@ -346,7 +346,7 @@ input[type="radio"] {
 }
 
 .sidebar:hover {
-    width: 30%;
+    width: 27%;
     padding: 1.5rem .5rem;
     box-shadow: 10px 0 25px -5px rgba(0, 0, 0, 0.4), 8px 0 10px -6px rgba(0, 0, 0, 0.4);
 }
@@ -631,9 +631,9 @@ input[type="radio"] {
     justify-content: space-between;
 
     i {
-        width: 1.25rem;
+        width: 1rem;
         text-align: center;
-        font-size: 0.85rem;
+        font-size: 0.9rem;
         margin-right: 0.5rem;
     }
 
@@ -645,16 +645,15 @@ input[type="radio"] {
         flex-shrink: 0;
         background-color: var(--c-primary-light-alpha-30);
         color: var(--c-text-inverted);
-        font-size: 0.75rem;
-        font-weight: 600;
+        font-size: 0.85rem;
+        font-weight: 800;
         border-radius: 9999px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         height: 1.25rem;
         min-width: 10px;
-        padding: 12px 12px;
-        margin-left: 1rem;
+        padding: 10px 11px;
     }
 
     &:hover {
@@ -731,7 +730,7 @@ input[type="radio"] {
 .account-list-drawer {
     display: flex;
     flex-direction: column;
-    padding: 0.75rem;
+    padding: 0.5rem;
     margin: 0.25rem 0.25rem 0.5rem 0.25rem;
     background-color: var(--c-primary-light-alpha-10);
     border: 1px solid var(--c-primary-light-alpha-30);
@@ -812,6 +811,16 @@ input[type="radio"] {
 .recipient-mini-icon {
     opacity: 0.8;
     cursor: help;
+}
+
+.all-accounts-icon {
+    background-color: var(--c-primary-light-alpha-20);
+    border: 0;
+}
+
+.all-accounts-icon i {
+    font-size: 0.7rem;
+    color: var(--c-text-inverted);
 }
 
 .sidebar .user-controls {
@@ -1791,6 +1800,8 @@ input[type="radio"] {
         line-height: 1.7;
         color: var(--c-text-base);
         white-space: pre-line;
+        border-radius: 15px;
+        margin: -0.5rem -0.7rem;
     }
 
     .link-button {
@@ -2694,4 +2705,167 @@ input[type="radio"] {
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+/* Spotlight Modal Styles - Apple Style Refined */
+.spotlight-backdrop {
+    backdrop-filter: blur(12px) !important;
+    background-color: rgba(0, 0, 0, 0.3) !important;
+}
+
+.spotlight-modal-paper.apple-style {
+    background: var(--c-bg-offset) !important;
+    backdrop-filter: blur(30px) !important;
+    border: 1px solid var(--c-border-base) !important;
+    border-radius: 24px !important;
+    box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.45) !important;
+    overflow: hidden !important;
+    margin-top: -15vh !important;
+}
+
+.dark .spotlight-modal-paper.apple-style {
+    background: rgba(30, 31, 35, 0.8) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.spotlight-main-input-wrapper {
+    display: flex;
+    align-items: center;
+    padding: 1.5rem 1.75rem;
+    gap: 1.25rem;
+}
+
+.spotlight-search-icon {
+    color: var(--c-primary);
+    font-size: 24px !important;
+}
+
+.spotlight-input {
+    font-size: 1.35rem !important;
+    font-weight: 500 !important;
+    color: var(--c-text-base) !important;
+}
+
+.spotlight-input input::placeholder {
+    color: var(--c-text-placeholder) !important;
+    opacity: 0.8;
+}
+
+.spotlight-input-divider {
+    height: 24px;
+    width: 1px;
+    background: var(--c-border-base);
+    margin: 0 0.5rem;
+}
+
+.spotlight-toggle-btn {
+    color: var(--c-text-subtle) !important;
+    transition: all 0.2s ease !important;
+}
+
+.spotlight-toggle-btn.active {
+    color: var(--c-primary) !important;
+    background: var(--c-info-bg) !important;
+}
+
+.spotlight-advanced-container {
+    padding: 0 1.75rem 1.75rem 1.75rem;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.spotlight-section-label {
+    display: block !important;
+    font-size: 0.75rem !important;
+    font-weight: 800 !important;
+    color: var(--c-text-muted) !important;
+    letter-spacing: 0.05em !important;
+    margin-bottom: 0.75rem !important;
+}
+
+.spotlight-field-minimal {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: var(--c-bg-base);
+    border-radius: 12px;
+    border: 1px solid var(--c-border-base);
+    transition: border-color 0.2s ease;
+}
+
+.spotlight-field-minimal:focus-within {
+    border-color: var(--c-primary);
+}
+
+.spotlight-field-minimal .field-icon {
+    color: var(--c-text-subtle);
+}
+
+.spotlight-sub-input {
+    font-size: 1rem !important;
+    color: var(--c-text-base) !important;
+}
+
+.spotlight-minimal-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.75rem;
+    background: var(--c-bg-base);
+    border-top: 1px solid var(--c-border-base);
+}
+
+.dark .spotlight-minimal-footer {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.spotlight-shortcuts {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.shortcut {
+    color: var(--c-text-subtle) !important;
+    font-weight: 500 !important;
+}
+
+.key {
+    background: var(--c-border-base);
+    color: var(--c-text-muted);
+    padding: 2px 6px;
+    border-radius: 5px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    margin-right: 4px;
+}
+
+.spotlight-main-actions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.btn-minimal-text {
+    color: var(--c-text-muted) !important;
+    text-transform: none !important;
+    font-weight: 600 !important;
+}
+
+.btn-apple-primary {
+    background: var(--c-primary) !important;
+    color: white !important;
+    padding: 0.6rem 1.5rem !important;
+    border-radius: 12px !important;
+    text-transform: none !important;
+    font-weight: 700 !important;
+    font-size: 0.9rem !important;
+}
+
+.spotlight-clear-btn {
+    color: var(--c-text-placeholder) !important;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
