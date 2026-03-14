@@ -1,13 +1,14 @@
 import React from "react";
 import "./style.css";
-import { AppProvider } from "./AppContext";
+import { AppProvider, useAppContext } from "./AppContext";
 import Sidebar from "./components/Sidebar";
 import MainContent from "./components/MainContent";
 import Login from "./components/Login";
 import { useSession } from "./hooks/useAuth";
 
 function AppContent() {
-  const { data: user, isLoading, isError } = useSession();
+  const { data: user, isLoading } = useSession();
+  const { state } = useAppContext();
 
   if (isLoading) {
     return (
@@ -25,7 +26,7 @@ function AppContent() {
   return (
     <div className="main-layout">
       <Sidebar />
-      <div className="content-wrapper">
+      <div className={`content-wrapper ${state.sidebarPinned ? "sidebar--expanded" : ""}`}>
         <MainContent />
       </div>
     </div>

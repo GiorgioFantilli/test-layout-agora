@@ -1,307 +1,130 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { useAppContext } from "../AppContext";
-import { fetchEmailAccounts, fetchMessageCount } from "../services/api";
-import UserIcon from "./UserIcon";
 import { useSession, useLogout } from "../hooks/useAuth";
+import { useMessageCount } from "../hooks/useEmails";
+import { BACKEND_STATUS } from "../services/dtoMappers";
 
 function Sidebar() {
   const { state, dispatch } = useAppContext();
   const { data: user } = useSession();
   const logoutMutation = useLogout();
 
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-
-  const handleThemeToggle = () => {
-    dispatch({ type: "TOGGLE_THEME" });
-  };
+  const { data: pendingCount = 0 } = useMessageCount([BACKEND_STATUS.PERSISTED]);
+  const { data: processedCount = 0 } = useMessageCount([BACKEND_STATUS.PROCESSED]);
 
   const handleViewChange = (view) => {
     dispatch({ type: "SWITCH_VIEW", payload: view });
   };
 
-  const handleAccountToggle = (accountId) => {
-    const { selectedAccountIds } = state;
-    if (selectedAccountIds.length === 0) {
-      // Da "tutte" → seleziona solo questa
-      dispatch({ type: "SET_ACCOUNT_FILTER", payload: [accountId] });
-    } else if (selectedAccountIds.includes(accountId)) {
-      // Rimuovi questa; se era l'ultima → torna a "tutte"
-      const newIds = selectedAccountIds.filter((id) => id !== accountId);
-      dispatch({ type: "SET_ACCOUNT_FILTER", payload: newIds });
-    } else {
-      // Aggiungi questa alla selezione
-      dispatch({
-type: "SET_ACCOUNT_FILTER",
-payload: [...selectedAccountIds, accountId],
-});
-    }
+  const handleThemeToggle = () => {
+    dispatch({ type: "TOGGLE_THEME" });
   };
 
-  const [emailAccounts, setEmailAccounts] = useState([]);
+  const handlePinToggle = () => {
+    dispatch({ type: "TOGGLE_SIDEBAR_PIN" });
+  };
 
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchEmailAccounts(controller.signal)
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setEmailAccounts(data);
-        }
-      })
-      .catch((err) => {
-        if (err.name !== "AbortError") {
-          console.error("Errore nel recupero degli account email:", err);
-        }
-      });
-
-    return () => controller.abort();
-  }, []);
-
-  const visibleAccounts = emailAccounts.slice(0, 2);
-  const remainingCount =
-    emailAccounts.length > 2 ? emailAccounts.length - 2 : 0;
-
-  const [pendingCount, setPendingCount] = useState(0);
-  const [processedCount, setProcessedCount] = useState(0);
-
-  useEffect(() => {
-    const controller = new AbortController();
-
-    fetchMessageCount(controller.signal, ["READY_TO_PARSE"])
-      .then((data) => setPendingCount(data))
-      .catch((err) => {
-        if (err.name !== "AbortError") console.error(err);
-      });
-    // TODO: cambiare nello stato "protocollato"
-    fetchMessageCount(controller.signal, ["processed"])
-      .then((data) => setProcessedCount(data))
-      .catch((err) => {
-        if (err.name !== "AbortError") console.error(err);
-      });
-
-    return () => controller.abort();
-  }, [state.emails]);
-
-  const showAccountSelection =
-    emailAccounts.length > 1 || state.forceShowAccountSelection;
+  const expanded = state.sidebarPinned;
 
   return (
-    <aside className="sidebar">
-      <div className="sidebar-content">
-        <div className="app-info">
-          <div className="app-title-wrapper">
-            <div className="navbar-icon-bg">
-              <i className="fas fa-envelope"></i>
-            </div>
-            <div>
-              <h1 id="app-title">{state.config.app_title}</h1>
-              <h2>{state.config.comune_name}</h2>
-            </div>
+    <aside className={`sidebar ${expanded ? "sidebar--expanded" : ""}`}>
+
+      {/* Header: logo + pin button */}
+      <div className="sidebar-header">
+        <div className="sidebar-logo">
+          <div className="sidebar-logo-icon">
+            <i className="fas fa-envelope"></i>
           </div>
-          <span id="comune-name" style={{ display: "none" }}>
-            {state.config.comune_name}
-          </span>
+          <div className="sidebar-logo-text">
+            <span className="sidebar-logo-title">{state.config.app_title}</span>
+            <span className="sidebar-logo-comune">{state.config.comune_name}</span>
+          </div>
         </div>
-
-        <nav className="sidebar-nav-group">
-          {/* Da Protocollare */}
-          <div className="sidebar-drawer-container">
-            <button
-              className={`sidebar-nav-item ${state.currentView === "pending" ? "active" : ""}`}
-              onClick={() => handleViewChange("pending")}
-            >
-              <div className="ml-1 flex items-center">
-                <i className="fas fa-clock"></i>
-                <span>Da Protocollare</span>
-              </div>
-              <div className="mr-0 flex items-center gap-2">
-                <span className="nav-item-badge">{pendingCount}</span>
-                {showAccountSelection && (
-                  <i
-                    className={`fas fa-chevron-down filter-chevron ${state.currentView === "pending" ? "open" : ""}`}
-                  ></i>
-                )}
-              </div>
-            </button>
-
-            {state.currentView === "pending" && showAccountSelection && (
-              <div className="account-list-drawer">
-                <label
-                  className={`account-list-item ${state.selectedAccountIds.length === 0 ? "active" : ""}`}
-                  >
-                  <input
-                    type="checkbox"
-                    className="account-checkbox"
-                    checked={state.selectedAccountIds.length === 0}
-                    onChange={() =>
-                    dispatch({ type: "SET_ACCOUNT_FILTER", payload: [] })
-                  }
-/>
-                  <i className="fas fa-layer-group"></i>
-                  <span>Tutte le PEC</span>
-                </label>
-                {emailAccounts.map((account) => (
-                  <label
-                    key={account.id}
-                    className={`account-list-item ${state.selectedAccountIds.includes(account.id) ? "active" : ""}`}
-                  >
-                    <input
-                      type="checkbox"
-                      className="account-checkbox"
-                      checked={state.selectedAccountIds.includes(account.id)}
-                      onChange={() => handleAccountToggle(account.id)}
-                    />
-                    <UserIcon email={account.address} size="sm" />
-                    <span>{account.address}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Protocollate */}
-          <div className="sidebar-drawer-container">
-            <button
-              className={`sidebar-nav-item ${state.currentView === "processed" ? "active" : ""}`}
-              onClick={() => handleViewChange("processed")}
-            >
-              <div className="ml-1 flex items-center">
-                <i className="fas fa-check"></i>
-                <span>Protocollate</span>
-              </div>
-              <div className="mr-[0] flex items-center gap-2">
-                <span className="nav-item-badge">{processedCount}</span>
-                {showAccountSelection && (
-                  <i
-                    className={`fas fa-chevron-down filter-chevron ${state.currentView === "processed" ? "open" : ""}`}
-                  ></i>
-                )}
-              </div>
-            </button>
-
-            {state.currentView === "processed" && showAccountSelection && (
-              <div className="account-list-drawer">
-                <label
-                  className={`account-list-item ${state.selectedAccountIds.length === 0 ? "active" : ""}`}
-                  >
-                  <input
-                    type="checkbox"
-                    className="account-checkbox"
-                    checked={state.selectedAccountIds.length === 0}
-                    onChange={() =>
-                    dispatch({ type: "SET_ACCOUNT_FILTER", payload: [] })
-                  }
-/>
-                  <i className="fas fa-layer-group"></i>
-                  <span>Tutte le PEC</span>
-                </label>
-                {emailAccounts.map((account) => (
-                  <label
-                    key={account.id}
-                    className={`account-list-item ${state.selectedAccountIds.includes(account.id) ? "active" : ""}`}
-                  >
-                    <input
-                      type="checkbox"
-                      className="account-checkbox"
-                      checked={state.selectedAccountIds.includes(account.id)}
-                      onChange={() => handleAccountToggle(account.id)}
-                    />
-                    <UserIcon email={account.address} size="sm" />
-                    <span>{account.address}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
-        </nav>
-
-        <hr className="sidebar-divider" />
-
-        <div className="user-controls">
-          {/* Item 1: Utenti */}
-          <div className="user-control-item user-stack-row">
-            <div className="user-stack">
-              {visibleAccounts.map((account, index) => (
-                <UserIcon
-                  key={account.id || index}
-                  email={account.address}
-                  size="sm"
-                  className={index > 0 ? "ml-[-0.4rem]" : ""}
-                />
-              ))}
-              {remainingCount > 0 && (
-                <div
-                  className="user-icon-bubble user-icon-sm ml-[-0.4rem]"
-                  style={{ backgroundColor: "#a855f7" }}
-                >
-                  <span>+{remainingCount}</span>
-                </div>
-              )}
-              {emailAccounts.length === 0 && (
-                <div className="user-icon-bubble user-icon-sm">
-                  <span>--</span>
-                </div>
-              )}
-            </div>
-            <span className="user-stack-text">
-              {emailAccounts.length > 0
-                ? emailAccounts.map((a, i) => (
-                    <React.Fragment key={a.id || i}>
-                      {a.address}
-                      {i < emailAccounts.length - 1 && (
-                        <span className="text-muted"> – </span>
-                      )}
-                    </React.Fragment>
-                  ))
-                : "Caricamento..."}
-            </span>
-          </div>
-
-          {/* Item 2: Impostazioni */}
-          <button className="user-control-item">
-            <i className="fas fa-cog"></i>
-            <span>Impostazioni</span>
-          </button>
-
-          {/* Item 3: Tema */}
-          <button
-            id="theme-toggle"
-            className="user-control-item"
-            onClick={handleThemeToggle}
-          >
-            <i
-              id="theme-icon"
-              className={state.theme === "light" ? "fas fa-sun" : "fas fa-moon"}
-            ></i>
-            <span>
-              {state.theme === "light" ? "Tema Chiaro" : "Tema Scuro"}
-            </span>
-          </button>
-
-          {/* Item 4: Logout */}
-          <button
-            className="user-control-item logout-button"
-            onClick={() => logoutMutation.mutate()}
-            disabled={logoutMutation.isLoading}
-          >
-            <i className="fas fa-sign-out-alt"></i>
-            <span>{logoutMutation.isLoading ? "Esco..." : "Logout"}</span>
-          </button>
-        </div>
-
-        {user && (
-          <div className="sidebar-footer-user">
-            <div className="user-avatar-sm">
-              {user.username.charAt(0).toUpperCase()}
-            </div>
-            <div className="user-info-sm">
-              <span className="user-name-sm">
-                {user.full_name || user.username}
-              </span>
-              <span className="user-tenant-sm">{user.tenant_name}</span>
-            </div>
-          </div>
-        )}
+        <button
+          className="sidebar-pin-btn"
+          onClick={handlePinToggle}
+          title={expanded ? "Comprimi sidebar" : "Espandi sidebar"}
+        >
+          <i className={`fas fa-chevron-${expanded ? "left" : "right"}`}></i>
+        </button>
       </div>
+
+      {/* Navigation */}
+      <nav className="sidebar-nav">
+        <button
+          className={`sidebar-nav-item ${state.currentView === "pending" ? "active" : ""}`}
+          data-count={pendingCount || ""}
+          onClick={() => handleViewChange("pending")}
+          title={!expanded ? "Da Protocollare" : undefined}
+        >
+          <i className="fas fa-clock sidebar-nav-icon"></i>
+          <span className="sidebar-nav-label">Da Protocollare</span>
+          <span className="sidebar-nav-badge">{pendingCount}</span>
+        </button>
+
+        <button
+          className={`sidebar-nav-item ${state.currentView === "processed" ? "active" : ""}`}
+          data-count={processedCount || ""}
+          onClick={() => handleViewChange("processed")}
+          title={!expanded ? "Protocollate" : undefined}
+        >
+          <i className="fas fa-check-circle sidebar-nav-icon"></i>
+          <span className="sidebar-nav-label">Protocollate</span>
+          <span className="sidebar-nav-badge">{processedCount}</span>
+        </button>
+      </nav>
+
+      {/* Spacer */}
+      <div className="sidebar-spacer"></div>
+
+      {/* Bottom controls */}
+      <div className="sidebar-bottom">
+        <button
+          className="sidebar-nav-item"
+          disabled
+          title={!expanded ? "Impostazioni (presto disponibile)" : undefined}
+        >
+          <i className="fas fa-cog sidebar-nav-icon"></i>
+          <span className="sidebar-nav-label">Impostazioni</span>
+        </button>
+
+        <button
+          className="sidebar-nav-item"
+          onClick={handleThemeToggle}
+          title={!expanded ? (state.theme === "light" ? "Tema Chiaro" : "Tema Scuro") : undefined}
+        >
+          <i className={`fas fa-${state.theme === "light" ? "sun" : "moon"} sidebar-nav-icon`}></i>
+          <span className="sidebar-nav-label">
+            {state.theme === "light" ? "Tema Chiaro" : "Tema Scuro"}
+          </span>
+        </button>
+
+        <button
+          className="sidebar-nav-item sidebar-nav-item--danger"
+          onClick={() => logoutMutation.mutate()}
+          disabled={logoutMutation.isLoading}
+          title={!expanded ? "Logout" : undefined}
+        >
+          <i className="fas fa-sign-out-alt sidebar-nav-icon"></i>
+          <span className="sidebar-nav-label">
+            {logoutMutation.isLoading ? "Esco..." : "Logout"}
+          </span>
+        </button>
+      </div>
+
+      {/* User footer */}
+      {user && (
+        <div className="sidebar-footer">
+          <div className="sidebar-footer-avatar">
+            {user.username.charAt(0).toUpperCase()}
+          </div>
+          <div className="sidebar-footer-info">
+            <span className="sidebar-footer-name">{user.full_name || user.username}</span>
+            <span className="sidebar-footer-tenant">{user.tenant_name}</span>
+          </div>
+        </div>
+      )}
+
     </aside>
   );
 }

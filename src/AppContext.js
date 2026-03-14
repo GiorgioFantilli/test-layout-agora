@@ -17,7 +17,7 @@ const initialState = {
   analysisResults: {},
   selectedEmailData: null,
   selectedAccountIds: [],
-  forceShowAccountSelection: true,
+  sidebarPinned: true,
 };
 
 // Reducer to manage actions
@@ -51,6 +51,8 @@ function appReducer(state, action) {
 
     case "SET_ACCOUNT_FILTER":
       return { ...state, selectedAccountIds: action.payload };
+    case "TOGGLE_SIDEBAR_PIN":
+      return { ...state, sidebarPinned: !state.sidebarPinned };
     case "TOGGLE_FULLSCREEN":
       return { ...state, isFullscreen: !state.isFullscreen };
     case "SET_THEME":

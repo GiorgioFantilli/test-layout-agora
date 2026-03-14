@@ -7,8 +7,8 @@ import React, {
 } from "react";
 import { useAppContext } from "../../AppContext";
 import EmailItem from "./EmailItem";
+import AccountFilter from "./AccountFilter";
 import { useMessages } from "../../hooks/useEmails";
-import { fetchEmailAccounts } from "../../services/api";
 import { BACKEND_STATUS, FRONTEND_STATUS } from "../../services/dtoMappers";
 
 // Sentinel component that triggers an action when it enters the viewport
@@ -62,13 +62,6 @@ function EmailListPanel() {
   const [skipProcessed, setSkipProcessed] = useState(0);
   const [hasMorePending, setHasMorePending] = useState(true);
   const [hasMoreProcessed, setHasMoreProcessed] = useState(true);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [emailAccounts, setEmailAccounts] = useState([]);
-
-  useEffect(() => {
-    fetchEmailAccounts().then(setEmailAccounts).catch(console.error);
-  }, []);
-
   const isPendingView = state.currentView === "pending";
   const currentSkip = isPendingView ? skipPending : skipProcessed;
 
@@ -164,6 +157,7 @@ function EmailListPanel() {
         <div className="list-main-header">
           <h2 className="list-main-title">Posta in arrivo</h2>
           <span className="list-main-subhead">{subheadText}</span>
+          <AccountFilter />
           <div className="header-right-actions">
             <button
               className="header-action-btn"

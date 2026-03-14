@@ -3,6 +3,8 @@ import {
   fetchMessages,
   fetchParsedMessage,
   fetchMessageDetails,
+  fetchEmailAccounts,
+  fetchMessageCount,
 } from "../services/api";
 
 /**
@@ -42,6 +44,31 @@ export const useParsedMessage = (messageId, options = {}) => {
     refetchOnWindowFocus: true,
     staleTime: 60000,
 
+    ...options,
+  });
+};
+
+/**
+ * Hook for fetching all email accounts
+ */
+export const useEmailAccounts = (options = {}) => {
+  return useQuery({
+    queryKey: ["emailAccounts"],
+    queryFn: ({ signal }) => fetchEmailAccounts(signal),
+    staleTime: 60000,
+    ...options,
+  });
+};
+
+/**
+ * Hook for fetching message count by status
+ */
+export const useMessageCount = (statuses = [], options = {}) => {
+  return useQuery({
+    queryKey: ["messageCount", { statuses }],
+    queryFn: ({ signal }) => fetchMessageCount(signal, statuses),
+    refetchInterval: 15000,
+    staleTime: 10000,
     ...options,
   });
 };
