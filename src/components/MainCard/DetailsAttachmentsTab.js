@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import AiButton from "./AiButton";
 import AttachmentItem from "./AttachmentItem";
+import AiIntelligencePanel from "./AiIntelligencePanel";
 import { formatEmailDateTime } from "../../utils/dateUtils";
 import EmailBodyViewer from "./EmailBodyViewer";
 
@@ -14,83 +15,98 @@ function DetailsAttachmentsTab({
   onAnalyzeAll,
   onAttachmentAnalyze,
   onGoToProtocol,
+  isFullscreen,
 }) {
+  const [isBodyExpanded, setIsBodyExpanded] = useState(true);
+
   const getInitials = (name) => {
     if (!name) return "?";
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .substring(0, 2)
-      .toUpperCase();
+    return name.split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase();
   };
+
+  const hasBody = !!(email.body_html || email.body || email.body_text);
 
   return (
     <div id="step1-content">
-      {/* Header: Avatar + Info Verticale */}
-      <div className="email-header-grid">
-        <div className="sender-avatar-large">{getInitials(email.sender)}</div>
 
-        <div className="email-meta-content">
-          <div className="sender-recipient-box">
-            <div className="sender-name-large">{email.sender}</div>
-            <div className="sender-email-row">{email.email}</div>
-            <div className="sender-status-row">
-              <button
-                className={`contact-status-badge ${senderStatus.className}`}
-                onClick={onVerifyContactClick}
-                title="Clicca per gestire lo stato del contatto"
-              >
-                <i className={`fas ${senderStatus.icon}`}></i>
-                <span className="status-text">{senderStatus.text}</span>
-              </button>
-            </div>
-            <div className="address-pill">
-              <span className="label">A:</span>
-              <span className="value">
-                {email.recipient || "ufficio.protocollo@pec.comune.it"}
-              </span>
+      {/* ── 1. Header mittente (riorganizzato) ── */}
+      <div
+        style={{
+          display: 'flex',
+          gap: '1rem',
+          alignItems: 'flex-start',
+          marginBottom: '1.5rem',
+          paddingBottom: '1rem',
+          borderBottom: '1px solid var(--c-border-base)',
+        }}
+      >
+        {/* Avatar */}
+        <div
+          style={{
+            width: '2.5rem',
+            height: '2.5rem',
+            minWidth: '2.5rem',
+            background: 'linear-gradient(135deg, var(--c-primary) 0%, var(--c-primary-dark) 100%)',
+            color: 'var(--c-text-inverted)',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: 700,
+            fontSize: '0.8rem',
+            letterSpacing: '0.05em',
+          }}
+        >
+          {getInitials(email.sender)}
+        </div>
+
+        {/* Colonna info */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+
+          {/* Riga 1: Nome + Badge (assoluto) + Email mittente + Data (a destra) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+            <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--c-text-base)', whiteSpace: 'nowrap' }}>
+              {email.sender}
+            </span>
+            <button
+              className={`contact-status-badge contact-status-badge-compact ${senderStatus.className}`}
+              onClick={onVerifyContactClick}
+              title={senderStatus.text}
+              style={{ flexShrink: 0 }}
+            >
+              <i className={`fas ${senderStatus.icon}`} style={{ fontSize: '0.65rem' }}></i>
+              <span className="status-text">{senderStatus.text}</span>
+            </button>
+            <span style={{ fontSize: '0.82rem', color: 'var(--c-text-muted)', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+              {email.email ? `${email.email}` : ''}
+            </span>
+            <div style={{ fontSize: '0.75rem', color: 'var(--c-text-muted)', display: 'flex', alignItems: 'center', gap: '0.3rem', flexShrink: 0, whiteSpace: 'nowrap' }}>
+              <i className="fas fa-calendar-alt" style={{ opacity: 0.5, fontSize: '0.65rem' }}></i>
+              {formatEmailDateTime(email.date)}
             </div>
           </div>
 
-          {/* Date */}
-          <div className="email-dates-compact">
-            <div className="date-row" title="Ricevuta">
-              <i className="fas fa-calendar-alt"></i>{" "}
-              {formatEmailDateTime(email.date)}
-            </div>
-            {email.readDate && (
-              <div
-                className="date-row"
-                title="Letta"
-                style={{ color: "var(--c-success)" }}
-              >
-                <i className="fas fa-check-double"></i>{" "}
-                {formatEmailDateTime(email.readDate)}
-              </div>
-            )}
+          {/* Riga 2: Destinatario */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--c-text-subtle)', textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>
+              A:
+            </span>
+            <span style={{ backgroundColor: 'var(--c-bg-offset-2)', padding: '0.1rem 0.45rem', borderRadius: '4px', fontFamily: 'monospace', fontSize: '0.78rem', color: 'var(--c-text-base)' }}>
+              {email.recipient || "ufficio.protocollo@pec.comune.it"}
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Oggetto */}
+      {/* ── 2. Oggetto ── */}
       <div className="email-subject-container">
-        {/* <div className="subject-icon-modern">
-              <i className="fas fa-tag"></i>
-          </div> */}
         <h1 className="email-subject-large">{email.subject}</h1>
       </div>
 
-      {/* Corpo del Messaggio */}
-      <div className="message-body-card">
-        <div className="email-body-content" style={{ backgroundColor: 'white' }}>
-          <EmailBodyViewer
-            htmlContent={email.body_html}
-            textContent={email.body || email.body_text}
-          />
-        </div>
-      </div>
+      {/* ── 3. AI Intelligence ── */}
+      <AiIntelligencePanel aiResults={null} />
 
+      {/* ── 4. Allegati ── */}
       {attachments.length > 0 ? (
         <div className="attachments-section">
           <div className="attachments-header">
@@ -119,7 +135,7 @@ function DetailsAttachmentsTab({
           </div>
         </div>
       ) : (
-        <div style={{ marginBottom: "1.5rem" }} className="attachments-section">
+        <div style={{ marginBottom: "1.25rem" }} className="attachments-section">
           <h3 className="subheading">
             <i className="fas fa-paperclip mr-2"></i>Allegati (0)
           </h3>
@@ -129,15 +145,56 @@ function DetailsAttachmentsTab({
         </div>
       )}
 
-      <div className="step-footer">
-        <button
-          id="next-step-btn"
-          className="button-primary"
-          onClick={onGoToProtocol}
-        >
-          <i className="fas fa-arrow-right"></i>Procedi alla Protocollazione
-        </button>
-      </div>
+      {/* ── 5. Corpo messaggio (collassabile) ── */}
+      {hasBody && (
+        <div style={{ marginBottom: '1.5rem' }}>
+          <button
+            onClick={() => setIsBodyExpanded((v) => !v)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              width: '100%',
+              background: 'none',
+              border: 'none',
+              padding: '0.4rem 0',
+              cursor: 'pointer',
+              color: 'var(--c-text-muted)',
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              marginBottom: isBodyExpanded ? '0.6rem' : '0',
+            }}
+          >
+            <i className="fas fa-envelope-open" style={{ fontSize: '0.72rem' }}></i>
+            Corpo del messaggio
+            <i
+              className={`fas fa-chevron-${isBodyExpanded ? 'up' : 'down'}`}
+              style={{ marginLeft: 'auto', fontSize: '0.65rem' }}
+            ></i>
+          </button>
+
+          {/* Nessun box/card — il contenuto fluisce direttamente nella pagina */}
+          {isBodyExpanded && (
+            <div style={{ paddingLeft: '0.1rem' }}>
+              <EmailBodyViewer
+                htmlContent={email.body_html}
+                textContent={email.body || email.body_text}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── 6. Footer (nascosto in fullscreen) ── */}
+      {!isFullscreen && (
+        <div className="step-footer">
+          <button id="next-step-btn" className="button-primary" onClick={onGoToProtocol}>
+            <i className="fas fa-arrow-right"></i>Procedi alla Protocollazione
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,54 +1,53 @@
-import React, { useEffect, useRef } from 'react';
+import { useRef, useEffect } from 'react';
+import { buildEmailSrcDoc } from '../../utils/iframeUtils';
 
 function EmailBodyViewer({ htmlContent, textContent }) {
   const iframeRef = useRef(null);
 
   useEffect(() => {
-    const iframe = iframeRef.current;
-    if (!iframe || !htmlContent) return;
-
-    const handleLoad = () => {
-      try {
-        const doc = iframe.contentDocument || iframe.contentWindow.document;
-        if (doc) {
-          iframe.style.height = doc.documentElement.scrollHeight + 'px';
-        }
-      } catch (e) {
-        console.error("Could not adjust iframe height", e);
+    const handleMessage = (event) => {
+      if (
+        event.data?.type === 'pec_iframe_height' &&
+        iframeRef.current &&
+        event.source === iframeRef.current.contentWindow
+      ) {
+        iframeRef.current.style.height = event.data.height + 'px';
       }
     };
 
-    iframe.addEventListener('load', handleLoad);
-    const timeout = setTimeout(handleLoad, 500);
-
-    return () => {
-      iframe.removeEventListener('load', handleLoad);
-      clearTimeout(timeout);
-    };
-  }, [htmlContent]);
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
 
   if (htmlContent) {
     return (
       <iframe
-        className='scrollbar-styled'
         ref={iframeRef}
         title="Email Content"
-        srcDoc={htmlContent}
+        srcDoc={buildEmailSrcDoc(htmlContent)}
         style={{
           width: '100%',
           border: 'none',
           overflow: 'hidden',
-          minHeight: '45vh',
-          backgroundColor: 'transparent',
-          borderRadius: '10px'
+          display: 'block',
         }}
-        sandbox="allow-popups allow-popups-to-escape-sandbox"
+        sandbox="allow-popups allow-popups-to-escape-sandbox allow-scripts"
       />
     );
   }
 
   return (
-    <div className="email-text-body" style={{ whiteSpace: 'pre-wrap', color: 'var(--c-text-base)' }}>
+    <div
+      style={{
+        whiteSpace: 'pre-wrap',
+        color: 'var(--c-text-base)',
+        lineHeight: '1.75',
+        fontSize: '0.9rem',
+        maxWidth: '70ch',
+        fontFamily: 'inherit',
+        letterSpacing: '0.01em',
+      }}
+    >
       {textContent || "Nessun contenuto"}
     </div>
   );
