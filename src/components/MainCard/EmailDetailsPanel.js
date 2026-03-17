@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useAppContext } from "../../AppContext";
 import ContactModal from "./ContactModal";
 import DetailsAttachmentsTab from "./DetailsAttachmentsTab";
@@ -23,7 +23,6 @@ function EmailDetailsPanel({ emailId, style }) {
   });
   const [isSynthesizingAll, setIsSynthesizingAll] = useState(false);
 
-
   const { data: detailedMsg } = useMessageDetails(emailId);
   const { refetch: forceFetchParsed } = useParsedMessage(emailId, { enabled: false });
 
@@ -32,8 +31,6 @@ function EmailDetailsPanel({ emailId, style }) {
       dispatch({ type: "SET_SELECTED_EMAIL_DATA", payload: detailedMsg });
     }
   }, [detailedMsg, dispatch]);
-
-
 
   useEffect(() => {
     const mockStatus = (() => {
@@ -62,7 +59,6 @@ function EmailDetailsPanel({ emailId, style }) {
       setAiSuggestionsVisible(currentEmailStatus === "analyzed");
     }
   }, [emailId, currentEmailStatus, aiSuggestionsLoading]);
-
 
   const handleAnalyzeAll = async () => {
     setIsSynthesizingAll(true);
@@ -96,7 +92,7 @@ function EmailDetailsPanel({ emailId, style }) {
 
     try {
       await forceFetchParsed();
-      await delay(Math.random() * 1200 + 800); // Simulazione ritardo
+      await delay(Math.random() * 1200 + 800);
 
       const resultText = MOCK_ANALYSIS_TEXTS[filename] || "Analisi completata: il documento è stato letto.";
       dispatch({ type: "UPDATE_ANALYSIS_RESULTS", payload: { emailId, results: { [attachmentId]: resultText } } });
@@ -117,7 +113,7 @@ function EmailDetailsPanel({ emailId, style }) {
       dispatch({ type: "MARK_AS_ANALYZED", payload: emailId });
 
       await forceFetchParsed();
-      await delay(Math.random() * 3500 + 1500); // Simulazione ritardo
+      await delay(Math.random() * 3500 + 1500);
 
       setAiSuggestionsLoading(false);
       setAiSuggestionsVisible(true);
@@ -152,6 +148,35 @@ function EmailDetailsPanel({ emailId, style }) {
 
   const panelClasses = ["details-panel", state.selectedEmailId ? "slide-in" : "slide-out", state.isFullscreen ? "fullscreen" : state.selectedEmailId ? "open" : ""].filter(Boolean).join(" ");
 
+  // Props comuni ai due tab
+  const detailsTabProps = {
+    email,
+    attachments,
+    senderStatus,
+    onVerifyContactClick: () => setIsModalOpen(true),
+    analysisResults,
+    isSynthesizingAll,
+    onAnalyzeAll: handleAnalyzeAll,
+    onAttachmentAnalyze: handleAttachmentAnalyze,
+    onGoToProtocol: () => setCurrentStep(2),
+    isFullscreen: state.isFullscreen,
+  };
+
+  const protocolTabProps = {
+    attachments,
+    analysisResults,
+    isSynthesizingAll,
+    onAttachmentAnalyze: handleAttachmentAnalyze,
+    aiSuggestionsLoading,
+    aiSuggestionsVisible,
+    onGetAISuggestions: handleGetAISuggestions,
+    onOfficeSelect: (e) => setSelectedOffice(e.target.value),
+    onGoBack: () => setCurrentStep(1),
+    onProtocol: handleProtocol,
+    protocolStatus,
+    isFullscreen: state.isFullscreen,
+  };
+
   return (
     <div id="email-details-panel" className={panelClasses} style={style}>
       <ContactModal
@@ -167,21 +192,27 @@ function EmailDetailsPanel({ emailId, style }) {
         }}
       />
 
+      {/* ── Header ── */}
       <div className="details-header">
         <h2><i className="fas fa-envelope-open-text"></i></h2>
-        <div className="tab-navigation-wrapper">
-          <div className="sliding-pill-toggle sliding-pill-fullwidth">
-            <input type="radio" name="step-toggle" id="pill-step-1" className="sliding-pill-input" checked={currentStep === 1} onChange={() => setCurrentStep(1)} />
-            <label htmlFor="pill-step-1" className="sliding-pill-label" id="step1-tab-label">
-              <i className="fas fa-info-circle"></i>Dettagli & Allegati
-            </label>
-            <input type="radio" name="step-toggle" id="pill-step-2" className="sliding-pill-input" checked={currentStep === 2} onChange={() => setCurrentStep(2)} />
-            <label htmlFor="pill-step-2" className="sliding-pill-label" id="step2-tab-label">
-              <i className="fas fa-clipboard-list"></i>Protocollazione
-            </label>
-            <div className="sliding-pill-bg"></div>
+
+        {/* Tab toggle: solo in vista compatta */}
+        {!state.isFullscreen && (
+          <div className="tab-navigation-wrapper">
+            <div className="sliding-pill-toggle sliding-pill-fullwidth">
+              <input type="radio" name="step-toggle" id="pill-step-1" className="sliding-pill-input" checked={currentStep === 1} onChange={() => setCurrentStep(1)} />
+              <label htmlFor="pill-step-1" className="sliding-pill-label" id="step1-tab-label">
+                <i className="fas fa-info-circle"></i>Messaggio & Allegati
+              </label>
+              <input type="radio" name="step-toggle" id="pill-step-2" className="sliding-pill-input" checked={currentStep === 2} onChange={() => setCurrentStep(2)} />
+              <label htmlFor="pill-step-2" className="sliding-pill-label" id="step2-tab-label">
+                <i className="fas fa-clipboard-list"></i>Protocollazione
+              </label>
+              <div className="sliding-pill-bg"></div>
+            </div>
           </div>
-        </div>
+        )}
+
         <div className="header-button-group">
           <button id="expand-details" className="details-header-button" title="Espandi" onClick={toggleFullscreen}>
             <i className={state.isFullscreen ? "fas fa-compress" : "fas fa-expand"}></i>
@@ -192,35 +223,35 @@ function EmailDetailsPanel({ emailId, style }) {
         </div>
       </div>
 
-      <div key={currentStep} className="details-content-scroll scrollbar-styled content-fade-in">
-        {currentStep === 1 ? (
-          <DetailsAttachmentsTab
-            email={email}
-            attachments={attachments}
-            senderStatus={senderStatus}
-            onVerifyContactClick={() => setIsModalOpen(true)}
-            analysisResults={analysisResults}
-            isSynthesizingAll={isSynthesizingAll}
-            onAnalyzeAll={handleAnalyzeAll}
-            onAttachmentAnalyze={handleAttachmentAnalyze}
-            onGoToProtocol={() => setCurrentStep(2)}
-          />
-        ) : (
-          <ProtocolTab
-            attachments={attachments}
-            analysisResults={analysisResults}
-            isSynthesizingAll={isSynthesizingAll}
-            onAttachmentAnalyze={handleAttachmentAnalyze}
-            aiSuggestionsLoading={aiSuggestionsLoading}
-            aiSuggestionsVisible={aiSuggestionsVisible}
-            onGetAISuggestions={handleGetAISuggestions}
-            onOfficeSelect={(e) => setSelectedOffice(e.target.value)}
-            onGoBack={() => setCurrentStep(1)}
-            onProtocol={handleProtocol}
-            protocolStatus={protocolStatus}
-          />
-        )}
-      </div>
+      {/* ── Contenuto ── */}
+      {state.isFullscreen ? (
+        // Vista fullscreen: 2 colonne affiancate
+        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+          {/* Colonna sinistra: messaggio + allegati */}
+          <div
+            className="details-content-scroll scrollbar-styled"
+            style={{ flex: 1, borderRight: '1px solid var(--c-border-base)' }}
+          >
+            <DetailsAttachmentsTab {...detailsTabProps} />
+          </div>
+
+          {/* Colonna destra: protocollazione */}
+          <div
+            className="details-content-scroll scrollbar-styled"
+            style={{ width: '360px', flexShrink: 0 }}
+          >
+            <ProtocolTab {...protocolTabProps} />
+          </div>
+        </div>
+      ) : (
+        // Vista compatta: tab singolo
+        <div key={currentStep} className="details-content-scroll scrollbar-styled content-fade-in">
+          {currentStep === 1
+            ? <DetailsAttachmentsTab {...detailsTabProps} />
+            : <ProtocolTab {...protocolTabProps} />
+          }
+        </div>
+      )}
     </div>
   );
 }

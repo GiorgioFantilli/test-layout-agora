@@ -1694,27 +1694,75 @@ input[type="radio"] {
     }
 
     .contact-status-badge.status-success {
-        background-color: var(--c-success-bg);
-        color: var(--c-success-dark);
-        border-color: var(--c-success-dark);
+        --badge-bg: var(--c-success-bg);
+        --badge-color: var(--c-success-dark);
+        --badge-border: var(--c-success-dark);
+        background-color: var(--badge-bg);
+        color: var(--badge-color);
+        border-color: var(--badge-border);
     }
 
     .contact-status-badge.status-warning {
-        background-color: var(--c-warning-medium-bg);
-        color: var(--c-warning-text);
-        border-color: var(--c-warning-border);
+        --badge-bg: var(--c-warning-medium-bg);
+        --badge-color: var(--c-warning-text);
+        --badge-border: var(--c-warning-border);
+        background-color: var(--badge-bg);
+        color: var(--badge-color);
+        border-color: var(--badge-border);
     }
 
     .contact-status-badge.status-danger {
-        background-color: var(--c-danger-bg);
-        color: var(--c-danger-text);
-        border-color: var(--c-danger-text);
+        --badge-bg: var(--c-danger-bg);
+        --badge-color: var(--c-danger-text);
+        --badge-border: var(--c-danger-text);
+        background-color: var(--badge-bg);
+        color: var(--badge-color);
+        border-color: var(--badge-border);
     }
 
     .contact-status-badge.status-info {
-        background-color: var(--c-info-bg);
-        color: var(--c-info-text-dark);
-        border-color: var(--c-info-border);
+        --badge-bg: var(--c-info-bg);
+        --badge-color: var(--c-info-text-dark);
+        --badge-border: var(--c-info-border);
+        background-color: var(--badge-bg);
+        color: var(--badge-color);
+        border-color: var(--badge-border);
+    }
+
+    /* Badge compatto: mostra solo icona, testo emerge in assoluto senza layout shift */
+    .contact-status-badge-compact {
+        position: relative;
+        padding: 0.2rem 0.35rem;
+        flex-shrink: 0;
+    }
+
+    .contact-status-badge-compact:hover {
+        transform: none;
+        filter: none;
+    }
+
+    .contact-status-badge-compact .status-text {
+        position: absolute;
+        left: calc(100% + 0.3rem);
+        top: 50%;
+        transform: translateY(-50%) translateX(-4px);
+        background-color: var(--badge-bg);
+        color: var(--badge-color);
+        border: 1px solid var(--badge-border);
+        padding: 0.2rem 0.55rem;
+        border-radius: 20px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        white-space: nowrap;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.18s ease, transform 0.18s ease;
+        z-index: 10;
+    }
+
+    .contact-status-badge-compact:hover .status-text {
+        opacity: 1;
+        transform: translateY(-50%) translateX(0);
     }
 
     /* Destinatario */
