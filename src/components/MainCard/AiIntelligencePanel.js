@@ -1,7 +1,7 @@
 import React from 'react';
 
 const URGENCY_STYLES = {
-  alta:  { bg: '#fee2e2', text: '#b91c1c', label: 'Alta' },
+  alta: { bg: '#fee2e2', text: '#b91c1c', label: 'Alta' },
   media: { bg: '#fef3c7', text: '#b45309', label: 'Media' },
   bassa: { bg: '#dcfce7', text: '#15803d', label: 'Bassa' },
 };
@@ -22,7 +22,7 @@ function AiIntelligencePanel({ aiResults }) {
       border: '1px solid var(--c-border-base)',
       borderRadius: '10px',
       overflow: 'hidden',
-      marginBottom: '1.25rem',
+      marginBottom: '1.75rem',
     }}>
 
       {/* Header banda AI */}

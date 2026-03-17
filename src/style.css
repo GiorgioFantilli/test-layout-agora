@@ -1816,7 +1816,6 @@ input[type="radio"] {
         gap: 1rem;
         margin-bottom: .75rem;
         align-items: baseline;
-        padding-left: 7.5px;
     }
 
     .subject-icon-modern {
@@ -1847,6 +1846,16 @@ input[type="radio"] {
         border-radius: 15px;
         padding: .75rem .95rem;
         margin-bottom: 2rem;
+        overflow: visible;
+    }
+
+    .message-body-html-card {
+        background-color: var(--c-bg-base);
+        border: 2px solid var(--c-bg-base);
+        border-radius: 15px;
+        padding: .75rem .95rem;
+        margin-bottom: 2rem;
+        overflow: visible;
     }
 
     .email-body-content {
@@ -1872,7 +1881,7 @@ input[type="radio"] {
     }
 
     .attachments-section {
-        margin-bottom: 2.5rem;
+        margin-bottom: 1.6rem;
         border-radius: 20px;
         padding: 1rem;
         padding-bottom: 0.75rem;

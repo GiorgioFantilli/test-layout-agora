@@ -38,15 +38,7 @@ function EmailBodyViewer({ htmlContent, textContent }) {
 
   return (
     <div
-      style={{
-        whiteSpace: 'pre-wrap',
-        color: 'var(--c-text-base)',
-        lineHeight: '1.75',
-        fontSize: '0.9rem',
-        maxWidth: '70ch',
-        fontFamily: 'inherit',
-        letterSpacing: '0.01em',
-      }}
+      className='email-body-content'
     >
       {textContent || "Nessun contenuto"}
     </div>

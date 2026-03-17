@@ -135,7 +135,7 @@ function DetailsAttachmentsTab({
           </div>
         </div>
       ) : (
-        <div style={{ marginBottom: "1.25rem" }} className="attachments-section">
+        <div className="attachments-section">
           <h3 className="subheading">
             <i className="fas fa-paperclip mr-2"></i>Allegati (0)
           </h3>
@@ -160,24 +160,24 @@ function DetailsAttachmentsTab({
               padding: '0.4rem 0',
               cursor: 'pointer',
               color: 'var(--c-text-muted)',
-              fontSize: '0.75rem',
+              fontSize: '16px',
               fontWeight: 600,
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              marginBottom: isBodyExpanded ? '0.6rem' : '0',
+              marginBottom: isBodyExpanded ? '0rem' : '0',
             }}
           >
-            <i className="fas fa-envelope-open" style={{ fontSize: '0.72rem' }}></i>
+            <i className="fas fa-envelope-open"></i>
             Corpo del messaggio
             <i
               className={`fas fa-chevron-${isBodyExpanded ? 'up' : 'down'}`}
-              style={{ marginLeft: 'auto', fontSize: '0.65rem' }}
+              style={{ marginLeft: 'auto' }}
             ></i>
           </button>
 
           {/* Nessun box/card — il contenuto fluisce direttamente nella pagina */}
           {isBodyExpanded && (
-            <div style={{ paddingLeft: '0.1rem' }}>
+            <div
+              className={email.body_html ? 'message-body-html-card' : 'message-body-card'}
+            >
               <EmailBodyViewer
                 htmlContent={email.body_html}
                 textContent={email.body || email.body_text}
@@ -185,17 +185,20 @@ function DetailsAttachmentsTab({
             </div>
           )}
         </div>
-      )}
+      )
+      }
 
       {/* ── 6. Footer (nascosto in fullscreen) ── */}
-      {!isFullscreen && (
-        <div className="step-footer">
-          <button id="next-step-btn" className="button-primary" onClick={onGoToProtocol}>
-            <i className="fas fa-arrow-right"></i>Procedi alla Protocollazione
-          </button>
-        </div>
-      )}
-    </div>
+      {
+        !isFullscreen && (
+          <div className="step-footer">
+            <button id="next-step-btn" className="button-primary" onClick={onGoToProtocol}>
+              <i className="fas fa-arrow-right"></i>Procedi alla Protocollazione
+            </button>
+          </div>
+        )
+      }
+    </div >
   );
 }
 

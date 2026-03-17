@@ -5,12 +5,23 @@ const BASE_STYLES = `
     font-family: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     margin: 0;
     padding: 0;
+    overflow-x: hidden;
+    word-break: break-word;
+    width: 100%;
+  }
+  img {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+  table {
+    max-width: 100% !important;
+    table-layout: fixed !important;
+    width: 100% !important;
   }
 </style>
 `;
 
-// Script iniettato nel srcDoc: misura l'altezza e la comunica via postMessage.
-// Necessario perché sandbox senza allow-same-origin crea origine null → contentDocument bloccato.
+
 const HEIGHT_SCRIPT = `
 <script>
 (function() {
