@@ -1,10 +1,15 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { useAppContext } from '../../AppContext';
-import EmailItem from './EmailItem';
-import { useMessages } from '../../hooks/useEmails';
+import React, {
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
+import { useAppContext } from "../../AppContext";
+import EmailItem from "./EmailItem";
+import AccountFilter from "./AccountFilter";
 import SearchModal from '../SearchModal';
-import { fetchEmailAccounts } from '../../services/api';
-import { BACKEND_STATUS, FRONTEND_STATUS } from '../../services/dtoMappers';
+import { useMessages } from "../../hooks/useEmails";
+import { BACKEND_STATUS, FRONTEND_STATUS } from "../../services/dtoMappers";
 
 // Sentinel component that triggers an action when it enters the viewport
 function Sentinel({ onVisible, hasMore, isLoading }) {
@@ -12,11 +17,14 @@ function Sentinel({ onVisible, hasMore, isLoading }) {
 
   useEffect(() => {
     if (!hasMore || isLoading) return;
-    const observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) {
-        onVisible();
-      }
-    }, { threshold: 0.1 });
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          onVisible();
+        }
+      },
+      { threshold: 0.1 },
+    );
 
     const currentRef = sentinelRef.current;
     if (currentRef) observer.observe(currentRef);
@@ -29,8 +37,19 @@ function Sentinel({ onVisible, hasMore, isLoading }) {
   if (!hasMore) return null;
 
   return (
-    <div ref={sentinelRef} style={{ height: '40px', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '10px 0' }}>
-      {isLoading && <i className="fas fa-spinner fa-spin text-gray-500 text-xl"></i>}
+    <div
+      ref={sentinelRef}
+      style={{
+        height: "40px",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        margin: "10px 0",
+      }}
+    >
+      {isLoading && (
+        <i className="fas fa-spinner fa-spin text-gray-500 text-xl"></i>
+      )}
     </div>
   );
 }
@@ -40,10 +59,11 @@ function EmailListPanel() {
   const limit = 20;
 
   const isPendingView = state.currentView === 'pending';
-  const currentStatuses = isPendingView
-    ? [BACKEND_STATUS.PERSISTED]
-    : [BACKEND_STATUS.PROCESSED];
 
+  const currentStatuses = useMemo(
+    () => isPendingView ? [BACKEND_STATUS.PERSISTED] : [BACKEND_STATUS.PROCESSED],
+    [isPendingView]
+  );
 
   const {
     data: infiniteData,
@@ -52,18 +72,30 @@ function EmailListPanel() {
     isFetching,
     isFetchingNextPage,
     refetch
-  } = useMessages(limit, currentStatuses, state.selectedAccountId, state.searchFilters);
+  } = useMessages(
+    limit,
+    currentStatuses,
+    state.selectedAccountIds,
+    state.searchFilters
+  );
 
-  // Sync with AppContext to keep state.emails updated for other components
   useEffect(() => {
     if (infiniteData?.pages) {
-      const lastPage = infiniteData.pages[infiniteData.pages.length - 1];
-      if (lastPage?.result) {
-        const emailsMap = {};
-        lastPage.result.forEach(email => {
-          emailsMap[email.id] = email;
-        });
-        dispatch({ type: 'APPEND_EMAILS', payload: emailsMap });
+      const isFirstPage = infiniteData.pages?.length === 1;
+      const emailsMap = {};
+
+      infiniteData.pages.forEach(page => {
+        if (page?.result) {
+          page.result.forEach(email => {
+            emailsMap[email.id] = email;
+          });
+        }
+      });
+
+      if (isFirstPage) {
+        dispatch({ type: "SET_EMAILS", payload: emailsMap });
+      } else {
+        dispatch({ type: "APPEND_EMAILS", payload: emailsMap });
       }
     }
   }, [infiniteData, dispatch]);
@@ -74,27 +106,24 @@ function EmailListPanel() {
   }, [isFetching, isFetchingNextPage, hasNextPage, fetchNextPage]);
 
   const handleSelectEmail = (emailId) => {
-    dispatch({ type: 'SELECT_EMAIL', payload: emailId });
+    dispatch({ type: "SELECT_EMAIL", payload: emailId });
   };
-
-
 
   const allEmails = Object.entries(state.emails);
 
-  const pendingEmails = allEmails
-    .filter(([id, email]) =>
+  const pendingEmails = allEmails.filter(
+    ([id, email]) =>
       (email.status === FRONTEND_STATUS.PENDING || email.status === FRONTEND_STATUS.ANALYZED) &&
-      (state.selectedAccountId === null || email.account_id === state.selectedAccountId)
-    );
+      (state.selectedAccountIds?.length === 0 || state.selectedAccountIds?.some(aid => String(aid) === String(email.account_id)))
+  );
 
-  const processedEmails = allEmails
-    .filter(([id, email]) =>
+  const processedEmails = allEmails.filter(
+    ([id, email]) =>
       email.status === FRONTEND_STATUS.PROCESSED &&
-      (state.selectedAccountId === null || email.account_id === state.selectedAccountId)
-    );
+      (state.selectedAccountIds?.length === 0 || state.selectedAccountIds?.some(aid => String(aid) === String(email.account_id)))
+  );
 
-  const subheadText = state.currentView === 'pending' ? 'Da Protocollare' : 'Protocollate';
-
+  const subheadText = state.currentView === "pending" ? "Da Protocollare" : "Protocollate";
 
   return (
     <>
@@ -105,18 +134,27 @@ function EmailListPanel() {
         <div className="list-main-header">
           <h2 className="list-main-title">Posta in arrivo</h2>
           <span className="list-main-subhead">{subheadText}</span>
+          <AccountFilter />
           <div className="header-right-actions">
-            <button className="header-action-btn" title="Cerca" onClick={() => dispatch({ type: 'TOGGLE_SEARCH' })}>
+            <button
+              className="header-action-btn"
+              title="Cerca"
+              onClick={() => dispatch({ type: 'TOGGLE_SEARCH' })}
+            >
               <i className="fas fa-search"></i>
             </button>
-            <button className="header-action-btn" title="Aggiorna" onClick={() => refetch()} disabled={isFetching}>
-              <i className={`fas fa-sync-alt ${isFetching ? 'fa-spin' : ''}`}></i>
+            <button
+              className="header-action-btn"
+              title="Aggiorna"
+              onClick={() => refetch()}
+              disabled={isFetching && !isFetchingNextPage}
+            >
+              <i className={`fas fa-sync-alt ${isFetching && !isFetchingNextPage ? "fa-spin" : ""}`}></i>
             </button>
           </div>
         </div>
 
-
-        {state.currentView === 'pending' ? (
+        {state.currentView === "pending" ? (
           <div id="pending-section">
             <div id="email-list" className="email-list-container">
               {pendingEmails.map(([id, email]) => (
@@ -132,7 +170,6 @@ function EmailListPanel() {
             </div>
           </div>
         ) : (
-          /* Processed View */
           <div id="processed-section">
             <div id="email-list" className="email-list-container">
               {processedEmails
@@ -155,7 +192,7 @@ function EmailListPanel() {
           </div>
         )}
         <SearchModal />
-      </div >
+      </div>
     </>
   );
 }

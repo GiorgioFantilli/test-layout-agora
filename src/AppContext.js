@@ -1,7 +1,10 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useEffect } from "react";
 
 // Configuration object
-const defaultConfig = { app_title: "Sistema Protocollo", comune_name: "Comune di Roma" };
+const defaultConfig = {
+    app_title: "Sistema Protocollo",
+    comune_name: "Comune di Roma",
+};
 
 // Initial state
 const initialState = {
@@ -13,19 +16,25 @@ const initialState = {
     theme: localStorage.getItem('theme') || 'light',
     analysisResults: {},
     selectedEmailData: null,
-    selectedAccountId: null,
+    selectedAccountIds: [],
     forceShowAccountSelection: true,
     isSearchOpen: false,
     searchFilters: {},
+    sidebarPinned: true,
 };
 
 // Reducer to manage actions
 function appReducer(state, action) {
     switch (action.type) {
-        case 'SWITCH_VIEW':
-            return { ...state, currentView: action.payload, isFullscreen: false, selectedAccountId: null };
+        case "SWITCH_VIEW":
+            return {
+                ...state,
+                currentView: action.payload,
+                isFullscreen: false,
+                selectedAccountIds: [],
+            };
 
-        case 'SELECT_EMAIL':
+        case "SELECT_EMAIL":
             return {
                 ...state,
                 selectedEmailId: action.payload,
@@ -33,42 +42,57 @@ function appReducer(state, action) {
                 isFullscreen: false,
             };
 
-        case 'CLOSE_EMAIL':
-            return { ...state, selectedEmailId: null, selectedEmailData: null, isFullscreen: false };
-        case 'SET_SELECTED_EMAIL_DATA':
+        case "CLOSE_EMAIL":
+            return {
+                ...state,
+                selectedEmailId: null,
+                selectedEmailData: null,
+                isFullscreen: false,
+            };
+        case "SET_SELECTED_EMAIL_DATA":
             return { ...state, selectedEmailData: action.payload };
 
-        case 'SET_ACCOUNT_FILTER':
-            return { ...state, selectedAccountId: action.payload };
-        case 'TOGGLE_FULLSCREEN':
+        case "SET_ACCOUNT_FILTER":
+            return { ...state, selectedAccountIds: action.payload };
+        case "TOGGLE_SIDEBAR_PIN":
+            return { ...state, sidebarPinned: !state.sidebarPinned };
+        case "TOGGLE_FULLSCREEN":
             return { ...state, isFullscreen: !state.isFullscreen };
-        case 'SET_THEME':
-            localStorage.setItem('theme', action.payload);
+        case "SET_THEME":
+            localStorage.setItem("theme", action.payload);
             return { ...state, theme: action.payload };
-        case 'TOGGLE_THEME':
-            const newTheme = state.theme === 'light' ? 'dark' : 'light';
-            localStorage.setItem('theme', newTheme);
+        case "TOGGLE_THEME":
+            const newTheme = state.theme === "light" ? "dark" : "light";
+            localStorage.setItem("theme", newTheme);
             return { ...state, theme: newTheme };
-        case 'PROTOCOL_EMAIL':
+        case "PROTOCOL_EMAIL":
             const newEmailsOnProtocol = { ...state.emails };
             if (newEmailsOnProtocol[action.payload]) {
-                newEmailsOnProtocol[action.payload].status = 'processed';
+                newEmailsOnProtocol[action.payload].status = "processed";
             }
-            return { ...state, emails: newEmailsOnProtocol, selectedEmailId: null, isFullscreen: false };
-        case 'UPDATE_CONFIG':
+            return {
+                ...state,
+                emails: newEmailsOnProtocol,
+                selectedEmailId: null,
+                isFullscreen: false,
+            };
+        case "UPDATE_CONFIG":
             return { ...state, config: { ...state.config, ...action.payload } };
-        case 'MARK_AS_ANALYZED':
+        case "MARK_AS_ANALYZED":
             const newEmailsOnAnalyze = { ...state.emails };
-            if (newEmailsOnAnalyze[action.payload] && newEmailsOnAnalyze[action.payload].status === 'pending') {
-                newEmailsOnAnalyze[action.payload].status = 'analyzed';
+            if (
+                newEmailsOnAnalyze[action.payload] &&
+                newEmailsOnAnalyze[action.payload].status === "pending"
+            ) {
+                newEmailsOnAnalyze[action.payload].status = "analyzed";
             }
             return { ...state, emails: newEmailsOnAnalyze };
 
-        case 'UPDATE_ANALYSIS_RESULTS':
+        case "UPDATE_ANALYSIS_RESULTS":
             const { emailId, results } = action.payload;
             const newEmailResults = { ...(state.analysisResults[emailId] || {}) };
 
-            Object.keys(results).forEach(key => {
+            Object.keys(results).forEach((key) => {
                 if (results[key] === null) {
                     delete newEmailResults[key];
                 } else {
@@ -84,13 +108,13 @@ function appReducer(state, action) {
                 },
             };
 
-        case 'SET_EMAILS':
+        case "SET_EMAILS":
             return {
                 ...state,
                 emails: action.payload,
             };
 
-        case 'UPDATE_EMAIL_BODY':
+        case "UPDATE_EMAIL_BODY":
             const { id: eId, body: eBody } = action.payload;
             if (state.emails[eId] && state.emails[eId].body) return state;
 
@@ -100,20 +124,19 @@ function appReducer(state, action) {
                     ...state.emails,
                     [eId]: {
                         ...state.emails[eId],
-                        body: eBody
-                    }
-                }
+                        body: eBody,
+                    },
+                },
             };
 
-        case 'APPEND_EMAILS':
+        case "APPEND_EMAILS":
             return {
                 ...state,
                 emails: {
                     ...state.emails,
-                    ...action.payload
-                }
+                    ...action.payload,
+                },
             };
-
         case 'TOGGLE_SEARCH':
             return { ...state, isSearchOpen: !state.isSearchOpen };
         case 'CLOSE_SEARCH':
@@ -136,19 +159,20 @@ export function AppProvider({ children }) {
 
     // Effect for managing 'dark'/'light' theme
     useEffect(() => {
-        document.body.classList.remove('dark', 'light');
+        document.body.classList.remove("dark", "light");
         document.body.classList.add(state.theme);
 
-        const themeIcon = document.getElementById('theme-icon');
+        const themeIcon = document.getElementById("theme-icon");
         if (themeIcon) {
-            themeIcon.className = state.theme === 'dark' ? 'fas fa-moon' : 'fas fa-sun';
+            themeIcon.className =
+                state.theme === "dark" ? "fas fa-moon" : "fas fa-sun";
         }
     }, [state.theme]);
 
     // Initialize theme on load
     useEffect(() => {
-        const savedTheme = localStorage.getItem('theme') || 'light';
-        dispatch({ type: 'SET_THEME', payload: savedTheme });
+        const savedTheme = localStorage.getItem("theme") || "light";
+        dispatch({ type: "SET_THEME", payload: savedTheme });
     }, []);
 
     return (

@@ -1,10 +1,63 @@
 import { transformMessageDto, transformAttachmentDto } from "./dtoMappers";
 
+const API_BASE = process.env.REACT_APP_API_URL || "http://localhost/api/v1";
 const POLLER_API_BASE =
   process.env.REACT_APP_POLLER_URL || "http://localhost/poller";
 const PARSER_API_BASE =
   process.env.REACT_APP_PARSER_URL || "http://localhost/parser";
 
+/**
+ * Authentication: Login
+ */
+export const login = async (username, password) => {
+  const response = await fetch(`${API_BASE}/auth/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ username, password }),
+    credentials: "include",
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || "Login failed");
+  }
+  return await response.json();
+};
+
+/**
+ * Authentication: Logout
+ */
+export const logout = async () => {
+  const response = await fetch(`${API_BASE}/auth/logout`, {
+    method: "POST",
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error("Logout failed");
+  }
+  return true;
+};
+
+/**
+ * Authentication: Get current user
+ */
+export const fetchMe = async () => {
+  const response = await fetch(`${API_BASE}/auth/me`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+  });
+  if (!response.ok) {
+    if (response.status === 401) {
+      return null;
+    }
+    throw new Error("Failed to fetch user session");
+  }
+  return await response.json();
+};
 /**
  * Fetch messages from the Poller service.
  */
@@ -13,35 +66,45 @@ export const fetchMessages = async (
   limit = 50,
   skip = 0,
   statuses = [],
-  accountId = null,
+  accountIds = [],
   extraFilters = {},
 ) => {
   try {
-    let url = `${POLLER_API_BASE}/messages/?limit=${limit}&skip=${skip}`;
-    if (accountId) {
-      url += `&account_id=${encodeURIComponent(accountId)}`;
-    }
+    let url = `${POLLER_API_BASE}/messages/?limit=${limit}&skip=${skip}&order_by=desc`;
+
     if (statuses && statuses.length > 0) {
       statuses.forEach((st) => {
         url += `&status=${encodeURIComponent(st)}`;
       });
     }
-    Object.keys(extraFilters).forEach((key) => {
-      if (extraFilters[key] !== undefined && extraFilters[key] !== null) {
-        url += `&${encodeURIComponent(key)}=${encodeURIComponent(extraFilters[key])}`;
-      }
-    });
+
+    if (accountIds && accountIds.length > 0) {
+      accountIds.forEach((id) => {
+        url += `&account_id=${encodeURIComponent(id)}`;
+      });
+    }
+
+    if (extraFilters) {
+      Object.keys(extraFilters).forEach((key) => {
+        if (extraFilters[key] !== undefined && extraFilters[key] !== null && extraFilters[key] !== '') {
+          url += `&${encodeURIComponent(key)}=${encodeURIComponent(extraFilters[key])}`;
+        }
+      });
+    }
+
     const response = await fetch(url, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        "X-Tenant-Code": "default",
       },
+      credentials: "include",
       signal,
     });
+
     if (!response.ok) {
       throw new Error(`Error fetching messages: ${response.statusText}`);
     }
+
     const data = await response.json();
     const result = data.map((msg) => transformMessageDto(msg));
 
@@ -68,8 +131,8 @@ export const fetchParsedMessage = async (messageId, signal) => {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          "X-Tenant-Code": "default",
         },
+        credentials: "include",
         signal,
       },
     );
@@ -95,8 +158,8 @@ export const fetchEmailAccounts = async (signal) => {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        "X-Tenant-Code": "default",
       },
+      credentials: "include",
       signal,
     });
     if (!response.ok) {
@@ -120,8 +183,8 @@ export const fetchMessageMetadata = async (messageId, signal) => {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        "X-Tenant-Code": "default",
       },
+      credentials: "include",
       signal,
     });
     if (!response.ok) {
@@ -187,9 +250,7 @@ export const downloadAttachment = async (attachmentId, signal) => {
       `${POLLER_API_BASE}/attachments/${attachmentId}/download`,
       {
         method: "GET",
-        headers: {
-          "X-Tenant-Code": "default",
-        },
+        credentials: "include",
         signal,
       },
     );
@@ -215,15 +276,15 @@ export const fetchMessageCount = async (signal, statuses = []) => {
     let url = `${POLLER_API_BASE}/messages/count`;
     if (statuses && statuses.length > 0) {
       statuses.forEach((st, idx) => {
-        url += `${idx === 0 ? '?' : '&'}status_filter=${encodeURIComponent(st)}`;
+        url += `${idx === 0 ? "?" : "&"}status_filter=${encodeURIComponent(st)}`;
       });
     }
     const response = await fetch(url, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        "X-Tenant-Code": "default",
       },
+      credentials: "include",
       signal,
     });
     if (!response.ok) {

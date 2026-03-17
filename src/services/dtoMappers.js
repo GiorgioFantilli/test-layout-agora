@@ -1,4 +1,3 @@
-
 export const BACKEND_STATUS = {
   PERSISTED: "PERSISTED",
   PROCESSED: "PROCESSED",
@@ -63,26 +62,26 @@ export const transformAttachmentDto = (att) => ({
  */
 const parseFromAddress = (fromAddr) => {
   if (!fromAddr) {
-    return { sender: 'Sconosciuto', email: '' };
+    return { sender: "Sconosciuto", email: "" };
   }
 
   const emailMatch = fromAddr.match(/<[^>]+>/);
 
-  let email = '';
-  let sender = '';
+  let email = "";
+  let sender = "";
 
   if (emailMatch) {
     email = emailMatch[0].trim();
-    sender = fromAddr.replace(email, '').replace(/["\\]/g, '').trim();
+    sender = fromAddr.replace(email, "").replace(/["\\]/g, "").trim();
   } else {
-    const cleanEmail = fromAddr.replace(/["\\]/g, '').trim();
+    const cleanEmail = fromAddr.replace(/["\\]/g, "").trim();
     email = `<${cleanEmail}>`;
-    sender = '';
+    sender = "";
   }
 
   return {
-    sender: sender || 'Sconosciuto',
-    email: email
+    sender: sender || "Sconosciuto",
+    email: email,
   };
 };
 
@@ -90,21 +89,21 @@ const parseFromAddress = (fromAddr) => {
  * Decodes a MIME subject string.
  */
 const decodeMimeSubject = (subject) => {
-  if (!subject) return '';
+  if (!subject) return "";
 
-  let cleanedSubject = subject.replace(/\?=\s+=\?/g, '?==?');
+  let cleanedSubject = subject.replace(/\?=\s+=\?/g, "?==?");
 
   const mimeRegex = /=\?([^?]+)\?([BbQq])\?([^?]+)\?=/gi;
 
   return cleanedSubject.replace(mimeRegex, (match, charset, encoding, text) => {
     try {
-      if (encoding.toUpperCase() === 'Q') {
-        let qText = text.replace(/_/g, ' ');
-        qText = qText.replace(/=([A-Fa-f0-9]{2})/g, '%$1');
+      if (encoding.toUpperCase() === "Q") {
+        let qText = text.replace(/_/g, " ");
+        qText = qText.replace(/=([A-Fa-f0-9]{2})/g, "%$1");
         return decodeURIComponent(qText);
       }
 
-      if (encoding.toUpperCase() === 'B') {
+      if (encoding.toUpperCase() === "B") {
         return decodeURIComponent(escape(atob(text)));
       }
     } catch (e) {
@@ -136,6 +135,7 @@ export const transformMessageDto = (msg) => {
     recipient: msg.account?.address || "Sconosciuto",
     readDate: msg.status === "read" ? msg.msg_date : null,
     status: frontendStatus,
+    account_id: msg.account_id,
     parse_status: msg.parse_status,
     attachments: (msg.attachments || []).map(transformAttachmentDto),
   };
