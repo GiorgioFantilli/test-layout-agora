@@ -4,6 +4,7 @@ import AttachmentItem from "./AttachmentItem";
 import AiIntelligencePanel from "./AiIntelligencePanel";
 import { formatEmailDateTime } from "../../utils/dateUtils";
 import EmailBodyViewer from "./EmailBodyViewer";
+import { isComplexHtml } from "../../utils/iframeUtils";
 
 function DetailsAttachmentsTab({
   email,
@@ -176,7 +177,7 @@ function DetailsAttachmentsTab({
           {/* Nessun box/card — il contenuto fluisce direttamente nella pagina */}
           {isBodyExpanded && (
             <div
-              className={email.body_html ? 'message-body-html-card' : 'message-body-card'}
+              className={isComplexHtml(email.body_html) ? 'message-body-html-card' : 'message-body-card'}
             >
               <EmailBodyViewer
                 htmlContent={email.body_html}

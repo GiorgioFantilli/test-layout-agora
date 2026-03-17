@@ -1,8 +1,13 @@
 import React from "react";
 import AiButton from "./AiButton";
+import AttachmentItem from "./AttachmentItem";
+
 
 function ProtocolTab({
   attachments,
+  analysisResults,
+  isSynthesizingAll,
+  onAttachmentAnalyze,
   aiSuggestionsLoading,
   aiSuggestionsVisible,
   onGetAISuggestions,
@@ -15,21 +20,38 @@ function ProtocolTab({
   return (
     <div id="step2-content">
 
-      {/* Riepilogo allegati (compatto, solo count) */}
-      {attachments.length > 0 && (
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.4rem',
-          padding: '0.5rem 0',
-          marginBottom: '0.5rem',
-          color: 'var(--c-text-muted)',
-          fontSize: '0.82rem',
-        }}>
-          <i className="fas fa-paperclip" style={{ fontSize: '0.75rem' }}></i>
-          <span>
-            {attachments.length} allegat{attachments.length === 1 ? 'o' : 'i'} da protocollare
-          </span>
+      {attachments.length > 0 ? (
+        <div className="attachments-section">
+          <div className="attachments-header">
+            <h3>
+              <i className="fas fa-paperclip"></i>
+              {attachments.length} Allegat{attachments.length === 1 ? "o" : "i"}{" "}
+              da Protocollare
+            </h3>
+          </div>
+          <div
+            id="protocol-attachments-list"
+            className="py-[.5rem] attachments-list scrollbar-styled"
+          >
+            {attachments.map((att) => (
+              <AttachmentItem
+                key={att.id}
+                attachment={att}
+                analysisResult={analysisResults[att.id]}
+                isExternallyLoading={isSynthesizingAll}
+                onAnalyze={() => onAttachmentAnalyze(att.id, att.filename)}
+              />
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="attachments-section">
+          <div className="attachments-header">
+            <h5>
+              <i className="fas fa-paperclip mr-2"></i>
+              Questa email non contiene allegati da protocollare.
+            </h5>
+          </div>
         </div>
       )}
 

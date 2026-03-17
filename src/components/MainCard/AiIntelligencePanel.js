@@ -20,7 +20,7 @@ function AiIntelligencePanel({ aiResults }) {
   return (
     <div style={{
       border: '1px solid var(--c-border-base)',
-      borderRadius: '10px',
+      borderRadius: '20px',
       overflow: 'hidden',
       marginBottom: '1.75rem',
     }}>
@@ -30,7 +30,7 @@ function AiIntelligencePanel({ aiResults }) {
         display: 'flex',
         alignItems: 'center',
         gap: '0.5rem',
-        padding: '0.55rem 0.9rem',
+        padding: '0.55rem 1.0rem',
         backgroundColor: 'var(--c-bg-offset-2)',
         borderBottom: aiResults ? '1px solid var(--c-border-base)' : 'none',
       }}>
@@ -60,7 +60,7 @@ function AiIntelligencePanel({ aiResults }) {
           display: 'flex',
           alignItems: 'center',
           gap: '0.6rem',
-          padding: '0.7rem 0.9rem',
+          padding: '0.7rem 1.0rem',
           color: 'var(--c-text-subtle)',
         }}>
           <i className="fas fa-hourglass-half" style={{ fontSize: '0.75rem' }}></i>
@@ -70,7 +70,7 @@ function AiIntelligencePanel({ aiResults }) {
         </div>
       ) : (
         // Stato popolato: dati da subject_context_builder disponibili
-        <div style={{ padding: '0.8rem 0.9rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+        <div style={{ padding: '0.8rem 1.0rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
 
           {aiResults.classification && (
             <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
