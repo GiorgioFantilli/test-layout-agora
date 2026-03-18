@@ -2987,3 +2987,52 @@ input[type="radio"] {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/*------------------------------------*/
+/* Sliding Pill — variante 3 tab
+/*------------------------------------*/
+
+/* Override width per pill a 3 opzioni */
+.sliding-pill-3tabs .sliding-pill-label {
+    width: 112px;
+    font-size: 0.775rem;
+    padding: 0.35rem 0.25rem;
+}
+
+.sliding-pill-3tabs .sliding-pill-bg {
+    width: 112px;
+}
+
+/* Terzo tab: sposta la pill di 2× la larghezza */
+#pill-step-3:checked ~ .sliding-pill-bg {
+    transform: translateX(200%);
+}
+
+/*------------------------------------*/
+/* Timeline Cronologia
+/*------------------------------------*/
+
+@keyframes timelineItemIn {
+    from {
+        opacity: 0;
+        transform: translateX(-6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes skeletonPulse {
+    0%, 100% { background-color: var(--c-bg-offset-2); }
+    50%       { background-color: var(--c-bg-offset-3); }
+}
+
+.timeline-item {
+    animation: timelineItemIn 0.28s ease both;
+}
+
+.timeline-skeleton-pulse {
+    animation: skeletonPulse 1.4s ease-in-out infinite;
+    background-color: var(--c-bg-offset-2);
+}
