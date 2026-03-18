@@ -4,6 +4,7 @@ import ContactModal from "./ContactModal";
 import DetailsAttachmentsTab from "./DetailsAttachmentsTab";
 import ProtocolTab from "./ProtocolTab";
 import MessageTimeline from "./MessageTimeline";
+import PipelineStatusBar from "./PipelineStatusBar";
 import { SUPPORTED_FILE_TYPES } from "../../utils/uiUtils";
 import { MOCK_ANALYSIS_TEXTS } from "../../data/mockData";
 import { useMessageDetails, useParsedMessage, useSenderResolution } from "../../hooks/useEmails";
@@ -183,7 +184,8 @@ function EmailDetailsPanel({ emailId, style }) {
                 <i className="fas fa-clipboard-list"></i>Protocollo
               </label>
               <input type="radio" name="step-toggle" id="pill-step-3" className="sliding-pill-input" checked={currentStep === 3} onChange={() => setCurrentStep(3)} />
-              <label htmlFor="pill-step-3" className="sliding-pill-label" id="step3-tab-label">
+              <label htmlFor="pill-step-3" className="sliding-pill-label" id="step3-tab-label"
+                style={{ opacity: currentStep !== 3 ? 0.55 : undefined, fontSize: '0.72rem' }}>
                 <i className="fas fa-stream"></i>Cronologia
               </label>
               <div className="sliding-pill-bg"></div>
@@ -200,6 +202,9 @@ function EmailDetailsPanel({ emailId, style }) {
           </button>
         </div>
       </div>
+
+      {/* ── Pipeline status strip (persistente tra i tab) ── */}
+      {emailId && <PipelineStatusBar message={email} messageId={emailId} />}
 
       {/* ── Contenuto ── */}
       {state.isFullscreen ? (

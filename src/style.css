@@ -3113,6 +3113,15 @@ input[type="radio"] {
     background-color: var(--c-bg-offset-2);
 }
 
+@keyframes pipelinePulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.45; }
+}
+
+.pipeline-step-active {
+    animation: pipelinePulse 1.6s ease-in-out infinite;
+}
+
 /*------------------------------------*/
 /* Search Modal (Spotlight Style)
 /*------------------------------------*/

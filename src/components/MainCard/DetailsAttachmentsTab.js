@@ -2,10 +2,9 @@ import React, { useState, useMemo } from "react";
 import AiButton from "./AiButton";
 import AttachmentItem from "./AttachmentItem";
 import AiIntelligencePanel from "./AiIntelligencePanel";
-import PipelineStatusBar from "./PipelineStatusBar";
 import { formatEmailDateTime } from "../../utils/dateUtils";
 import EmailBodyViewer from "./EmailBodyViewer";
-import { useSubjectContext, useDocumentUnits, useRoutingSuggestion, useDocumentAnalysis } from "../../hooks/useEmails";
+import { useSubjectContext, useDocumentUnits, useDocumentAnalysis } from "../../hooks/useEmails";
 import { isComplexHtml } from "../../utils/iframeUtils";
 
 function DetailsAttachmentsTab({
@@ -23,7 +22,6 @@ function DetailsAttachmentsTab({
   const [isBodyExpanded, setIsBodyExpanded] = useState(true);
   const { data: subjectContext, isLoading: isSubjectContextLoading } = useSubjectContext(email?.id);
   const { data: documentUnits = [] } = useDocumentUnits(email?.id);
-  const { data: routingSuggestion } = useRoutingSuggestion(email?.id);
   const { data: documentAnalysisMap = {} } = useDocumentAnalysis(email?.id, {
     enabled: !!email?.id && subjectContext?.status === "completed",
   });
@@ -117,21 +115,12 @@ function DetailsAttachmentsTab({
         </div>
       </div>
 
-      {/* ── 2. Pipeline status bar ── */}
-      <PipelineStatusBar
-        message={email}
-        documentUnits={documentUnits}
-        subjectContext={subjectContext}
-        routingSuggestion={routingSuggestion}
-        isFullscreen={isFullscreen}
-      />
-
-      {/* ── 3. Oggetto ── */}
+      {/* ── 2. Oggetto ── */}
       <div className="email-subject-container">
         <h1 className="email-subject-large">{email.subject}</h1>
       </div>
 
-      {/* ── 4. AI Intelligence ── */}
+      {/* ── 3. AI Intelligence ── */}
       <div id="ai-intelligence-section">
         <AiIntelligencePanel aiResults={subjectContext} isLoading={isSubjectContextLoading} hasPendingDocumentUnits={hasPendingDocumentUnits} messageId={email?.id} />
       </div>

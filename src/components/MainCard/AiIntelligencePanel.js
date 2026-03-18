@@ -245,12 +245,15 @@ function AiIntelligencePanel({ aiResults, isLoading, hasPendingDocumentUnits, me
     );
   };
 
+  const hasContent = aiResults?.status === 'completed' || aiResults?.status === 'manual_review' || aiResults?.status === 'pending';
+
   return (
     <div style={{
-      border: '1px solid var(--c-border-base)',
+      border: '1px solid var(--c-ai-border-light)',
       borderRadius: '20px',
       overflow: 'hidden',
       marginBottom: '1.75rem',
+      backgroundColor: 'var(--c-bg-offset)',
     }}>
       {/* Header banda AI */}
       <div style={{
@@ -258,14 +261,20 @@ function AiIntelligencePanel({ aiResults, isLoading, hasPendingDocumentUnits, me
         alignItems: 'center',
         gap: '0.5rem',
         padding: '0.55rem 1.0rem',
-        backgroundColor: 'var(--c-bg-offset-2)',
-        borderBottom: (aiResults?.status === 'completed' || aiResults?.status === 'manual_review' || aiResults?.status === 'pending')
-          ? '1px solid var(--c-border-base)'
-          : 'none',
+        background: 'linear-gradient(135deg, var(--c-ai-bg) 0%, var(--c-ai-bg-to) 100%)',
+        borderBottom: hasContent ? '1px solid var(--c-ai-border-light)' : 'none',
       }}>
-        <i className="fa-solid fa-wand-magic-sparkles" style={{ fontSize: '0.75rem', color: 'var(--c-primary)' }}></i>
-        <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--c-text-muted)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-          Analisi AI
+        <i className="fa-solid fa-wand-magic-sparkles" style={{ fontSize: '0.75rem', color: 'var(--c-ai-gradient-end)' }}></i>
+        <span style={{
+          fontSize: '0.75rem',
+          fontWeight: 700,
+          letterSpacing: '0.04em',
+          textTransform: 'uppercase',
+          background: 'linear-gradient(135deg, var(--c-ai-gradient-start) 0%, var(--c-ai-gradient-end) 100%)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+        }}>
+          Proposta di protocollazione
         </span>
       </div>
 
