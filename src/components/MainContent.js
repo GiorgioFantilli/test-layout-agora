@@ -2,9 +2,18 @@ import React from "react";
 import { useAppContext } from "../AppContext";
 import EmailListPanel from "./EmailList/EmailListPanel";
 import EmailDetailsPanel from "./MainCard/EmailDetailsPanel";
+import DashboardView from "./Dashboard/DashboardView";
 
 function MainContent() {
   const { state } = useAppContext();
+
+  if (state.currentView === "dashboard") {
+    return (
+      <div className="main-content h-full">
+        <DashboardView />
+      </div>
+    );
+  }
 
   const isDetailsOpen = !!state.selectedEmailId;
   const isDetailsFullscreen = state.isFullscreen;
