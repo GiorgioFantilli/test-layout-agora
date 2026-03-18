@@ -11,11 +11,11 @@ const COLORS = [
   "#8b5cf6", // Violet
 ];
 
-const UserIcon = ({ email, size = "md", className = "" }) => {
+const UserIcon = ({ email, size = "md", className = "", style = {} }) => {
   const getInitials = (email) => {
     if (!email) return "??";
     const namePart = email.split("@")[0];
-    const parts = namePart.split(/[\.\-_]/);
+    const parts = namePart.split(/[.\-_]/);
     if (parts.length >= 2) {
       return (parts[0][0] + parts[1][0]).toUpperCase();
     }
@@ -45,7 +45,7 @@ const UserIcon = ({ email, size = "md", className = "" }) => {
   return (
     <div
       className={`user-icon-bubble ${sizeClass} ${className}`}
-      style={{ backgroundColor }}
+      style={{ backgroundColor, ...style }}
       title={email}
     >
       <span>{initials}</span>

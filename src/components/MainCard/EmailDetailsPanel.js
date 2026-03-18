@@ -172,7 +172,7 @@ function EmailDetailsPanel({ emailId, style }) {
 
         {/* Tab toggle: solo in vista compatta */}
         {!state.isFullscreen && (
-          <div className="tab-navigation-wrapper">
+          <div className="tab-navigation-wrapper fade-in">
             <div className="sliding-pill-toggle sliding-pill-3tabs">
               <input type="radio" name="step-toggle" id="pill-step-1" className="sliding-pill-input" checked={currentStep === 1} onChange={() => setCurrentStep(1)} />
               <label htmlFor="pill-step-1" className="sliding-pill-label" id="step1-tab-label">
@@ -207,7 +207,7 @@ function EmailDetailsPanel({ emailId, style }) {
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
           {/* Colonna sinistra: messaggio + allegati + cronologia */}
           <div
-            className="details-content-scroll scrollbar-styled"
+            className="details-content-scroll scrollbar-styled fade-in"
             style={{ flex: 1, borderRight: '1px solid var(--c-border-base)' }}
           >
             <DetailsAttachmentsTab {...detailsTabProps} />
@@ -216,7 +216,7 @@ function EmailDetailsPanel({ emailId, style }) {
 
           {/* Colonna destra: protocollazione */}
           <div
-            className="details-content-scroll scrollbar-styled"
+            className="details-content-scroll scrollbar-styled fade-in"
             style={{ width: '360px', flexShrink: 0 }}
           >
             <ProtocolTab {...protocolTabProps} />

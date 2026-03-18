@@ -1,13 +1,13 @@
 import React, {
   useEffect,
   useRef,
-  useState,
   useCallback,
   useMemo,
 } from "react";
 import { useAppContext } from "../../AppContext";
 import EmailItem from "./EmailItem";
 import AccountFilter from "./AccountFilter";
+import SearchModal from '../SearchModal';
 import { useMessages } from "../../hooks/useEmails";
 import { BACKEND_STATUS, FRONTEND_STATUS } from "../../services/dtoMappers";
 
@@ -58,67 +58,52 @@ function EmailListPanel() {
   const { state, dispatch } = useAppContext();
   const limit = 20;
 
-  const [skipPending, setSkipPending] = useState(0);
-  const [skipProcessed, setSkipProcessed] = useState(0);
-  const [hasMorePending, setHasMorePending] = useState(true);
-  const [hasMoreProcessed, setHasMoreProcessed] = useState(true);
-  const isPendingView = state.currentView === "pending";
-  const currentSkip = isPendingView ? skipPending : skipProcessed;
+  const isPendingView = state.currentView === 'pending';
 
   const currentStatuses = useMemo(
-    () =>
-      isPendingView ? [BACKEND_STATUS.PERSISTED] : [BACKEND_STATUS.PROCESSED],
-    [isPendingView],
+    () => isPendingView ? [BACKEND_STATUS.PERSISTED] : [BACKEND_STATUS.PROCESSED],
+    [isPendingView]
   );
 
   const {
-    data: fetchedEmails,
+    data: infiniteData,
+    fetchNextPage,
+    hasNextPage,
     isFetching,
-    refetch,
+    isFetchingNextPage,
+    refetch
   } = useMessages(
     limit,
-    currentSkip,
     currentStatuses,
     state.selectedAccountIds,
+    state.searchFilters
   );
 
   useEffect(() => {
-    // Reset pagination when account filter changes
-    setSkipPending(0);
-    setSkipProcessed(0);
-    setHasMorePending(true);
-    setHasMoreProcessed(true);
-  }, [state.selectedAccountIds]);
+    if (infiniteData?.pages) {
+      const isFirstPage = infiniteData.pages?.length === 1;
+      const emailsMap = {};
 
-  useEffect(() => {
-    if (fetchedEmails) {
-      const count = Object.keys(fetchedEmails).length;
+      infiniteData.pages.forEach(page => {
+        if (page?.result) {
+          page.result.forEach(email => {
+            emailsMap[email.id] = email;
+          });
+        }
+      });
 
-      if (isPendingView) {
-        setHasMorePending(count === limit);
+      if (isFirstPage) {
+        dispatch({ type: "SET_EMAILS", payload: emailsMap });
       } else {
-        setHasMoreProcessed(count === limit);
-      }
-
-      if (currentSkip === 0) {
-        // Al primo caricamento (o cambio account/vista) sovrascriviamo sempre
-        dispatch({ type: "SET_EMAILS", payload: fetchedEmails });
-      } else if (count > 0) {
-        // Alle pagine successive aggiungiamo solo se c'è qualcosa
-        dispatch({ type: "APPEND_EMAILS", payload: fetchedEmails });
+        dispatch({ type: "APPEND_EMAILS", payload: emailsMap });
       }
     }
-  }, [fetchedEmails, isPendingView, dispatch, limit, currentSkip]);
+  }, [infiniteData, dispatch]);
 
   const loadMore = useCallback(() => {
-    if (isFetching) return;
-
-    if (isPendingView && hasMorePending) {
-      setSkipPending((prev) => prev + limit);
-    } else if (!isPendingView && hasMoreProcessed) {
-      setSkipProcessed((prev) => prev + limit);
-    }
-  }, [isFetching, isPendingView, hasMorePending, hasMoreProcessed, limit]);
+    if (isFetching || isFetchingNextPage || !hasNextPage) return;
+    fetchNextPage();
+  }, [isFetching, isFetchingNextPage, hasNextPage, fetchNextPage]);
 
   const handleSelectEmail = (emailId) => {
     dispatch({ type: "SELECT_EMAIL", payload: emailId });
@@ -128,41 +113,34 @@ function EmailListPanel() {
 
   const pendingEmails = allEmails.filter(
     ([id, email]) =>
-      (email.status === FRONTEND_STATUS.PENDING ||
-        email.status === FRONTEND_STATUS.ANALYZED) &&
-      (state.selectedAccountIds.length === 0 ||
-        state.selectedAccountIds.some(
-          (aid) => String(aid) === String(email.account_id),
-        )),
+      (email.status === FRONTEND_STATUS.PENDING || email.status === FRONTEND_STATUS.ANALYZED) &&
+      (state.selectedAccountIds?.length === 0 || state.selectedAccountIds?.some(aid => String(aid) === String(email.account_id)))
   );
 
   const processedEmails = allEmails.filter(
     ([id, email]) =>
       email.status === FRONTEND_STATUS.PROCESSED &&
-      (state.selectedAccountIds.length === 0 ||
-        state.selectedAccountIds.some(
-          (aid) => String(aid) === String(email.account_id),
-        )),
+      (state.selectedAccountIds?.length === 0 || state.selectedAccountIds?.some(aid => String(aid) === String(email.account_id)))
   );
 
-  const subheadText =
-    state.currentView === "pending" ? "Da Protocollare" : "Protocollate";
+  const subheadText = state.currentView === "pending" ? "Da Protocollare" : "Protocollate";
 
   return (
     <>
       <div
-        key={state.currentView}
-        className="email-list-scroll-area scrollbar-styled content-fade-in"
+        className={`email-list-scroll-area fade-in scrollbar-styled ${state.currentView !== state.previousView ? 'content-fade-in' : ''}`}
       >
         <div className="list-main-header">
-          <h2 className="list-main-title">Posta in arrivo</h2>
-          <span className="list-main-subhead">{subheadText}</span>
+          <div className="title-subhead-stack">
+            <h2 className="list-main-title">Posta in arrivo</h2>
+            <span className="list-main-subhead">{subheadText}</span>
+          </div>
           <AccountFilter />
           <div className="header-right-actions">
             <button
               className="header-action-btn"
               title="Cerca"
-              onClick={() => console.log("Search clicked")}
+              onClick={() => dispatch({ type: 'TOGGLE_SEARCH' })}
             >
               <i className="fas fa-search"></i>
             </button>
@@ -170,11 +148,9 @@ function EmailListPanel() {
               className="header-action-btn"
               title="Aggiorna"
               onClick={() => refetch()}
-              disabled={isFetching}
+              disabled={isFetching && !isFetchingNextPage}
             >
-              <i
-                className={`fas fa-sync-alt ${isFetching ? "fa-spin" : ""}`}
-              ></i>
+              <i className={`fas fa-sync-alt ${isFetching && !isFetchingNextPage ? "fa-spin" : ""}`}></i>
             </button>
           </div>
         </div>
@@ -191,25 +167,16 @@ function EmailListPanel() {
                   isSelected={state.selectedEmailId === id}
                 />
               ))}
-              <Sentinel
-                hasMore={hasMorePending}
-                isLoading={isFetching}
-                onVisible={loadMore}
-              />
+              <Sentinel hasMore={hasNextPage} isLoading={isFetchingNextPage} onVisible={loadMore} />
             </div>
           </div>
         ) : (
-          /* Processed View */
           <div id="processed-section">
             <div id="email-list" className="email-list-container">
               {processedEmails
                 .sort(([idA, emailA], [idB, emailB]) => {
-                  const dateA = emailA.date
-                    ? new Date(emailA.date).getTime()
-                    : 0;
-                  const dateB = emailB.date
-                    ? new Date(emailB.date).getTime()
-                    : 0;
+                  const dateA = emailA.date ? new Date(emailA.date).getTime() : 0;
+                  const dateB = emailB.date ? new Date(emailB.date).getTime() : 0;
                   return dateB - dateA;
                 })
                 .map(([id, email]) => (
@@ -221,14 +188,11 @@ function EmailListPanel() {
                     isSelected={state.selectedEmailId === id}
                   />
                 ))}
-              <Sentinel
-                hasMore={hasMoreProcessed}
-                isLoading={isFetching}
-                onVisible={loadMore}
-              />
+              <Sentinel hasMore={hasNextPage} isLoading={isFetchingNextPage} onVisible={loadMore} />
             </div>
           </div>
         )}
+        <SearchModal />
       </div>
     </>
   );

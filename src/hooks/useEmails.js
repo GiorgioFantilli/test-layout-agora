@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import {
   fetchMessages,
   fetchParsedMessage,
@@ -33,69 +33,71 @@ import {
 } from "../services/dtoMappers";
 
 /**
- * Hook for fetching messages with polling support
+ * Hook for fetching messages with polling and infinite scroll support
  */
 export const useMessages = (
-  limit = 50,
-  skip = 0,
-  statuses = [],
-  accountIds = [],
-  options = {},
+    limit = 50,
+    statuses = [],
+    accountIds = [],
+    extraFilters = {},
+    options = {}
 ) => {
-  return useQuery({
-    queryKey: ["messages", { limit, skip, statuses, accountIds }],
+    return useInfiniteQuery({
+        queryKey: ['messages', { limit, statuses, accountIds, extraFilters }],
 
-    queryFn: ({ signal }) =>
-      fetchMessages(signal, limit, skip, statuses, accountIds),
+        queryFn: ({ pageParam = 0, signal }) =>
+            fetchMessages(signal, limit, pageParam, statuses, accountIds, extraFilters),
 
-    refetchInterval: 10000,
-    refetchOnWindowFocus: true,
-    staleTime: 5000,
+        getNextPageParam: (lastPage) => lastPage?.nextSkip,
 
-    ...options,
-  });
+        refetchInterval: 10000,
+        refetchOnWindowFocus: true,
+        staleTime: 5000,
+
+        ...options,
+    });
 };
 
 /**
  * Hook for fetching parsed message details
  */
 export const useParsedMessage = (messageId, options = {}) => {
-  return useQuery({
-    queryKey: ["parsedMessage", messageId],
+    return useQuery({
+        queryKey: ["parsedMessage", messageId],
 
-    queryFn: ({ signal }) => fetchParsedMessage(messageId, signal),
+        queryFn: ({ signal }) => fetchParsedMessage(messageId, signal),
 
-    enabled: !!messageId,
-    refetchOnWindowFocus: true,
-    staleTime: 60000,
+        enabled: !!messageId,
+        refetchOnWindowFocus: true,
+        staleTime: 60000,
 
-    ...options,
-  });
+        ...options,
+    });
 };
 
 /**
  * Hook for fetching all email accounts
  */
 export const useEmailAccounts = (options = {}) => {
-  return useQuery({
-    queryKey: ["emailAccounts"],
-    queryFn: ({ signal }) => fetchEmailAccounts(signal),
-    staleTime: 60000,
-    ...options,
-  });
+    return useQuery({
+        queryKey: ["emailAccounts"],
+        queryFn: ({ signal }) => fetchEmailAccounts(signal),
+        staleTime: 60000,
+        ...options,
+    });
 };
 
 /**
  * Hook for fetching message count by status
  */
 export const useMessageCount = (statuses = [], options = {}) => {
-  return useQuery({
-    queryKey: ["messageCount", { statuses }],
-    queryFn: ({ signal }) => fetchMessageCount(signal, statuses),
-    refetchInterval: 15000,
-    staleTime: 10000,
-    ...options,
-  });
+    return useQuery({
+        queryKey: ["messageCount", { statuses }],
+        queryFn: ({ signal }) => fetchMessageCount(signal, statuses),
+        refetchInterval: 15000,
+        staleTime: 10000,
+        ...options,
+    });
 };
 
 /**
@@ -198,195 +200,6 @@ export const useSenderResolutionDecision = (messageId) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["senderResolution", messageId] });
     },
-  });
-};
-
-/**
- * Hook for fetching message details
- */
-export const useMessageDetails = (messageId, options = {}) => {
-  return useQuery({
-    queryKey: ["messageDetails", messageId],
-    queryFn: ({ signal }) => fetchMessageDetails(messageId, signal),
-    enabled: !!messageId,
-    refetchOnWindowFocus: false,
-    ...options,
-  });
-};
-
-/**
- * Mutation to toggle enabled/disabled state of an email account.
- * Call with: mutate({ accountId, enabled })
- * On success, invalidates the emailAccounts cache.
- */
-export const useToggleAccount = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ accountId, enabled }) => patchEmailAccount(accountId, { enabled }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["emailAccounts"] });
-    },
-  });
-};
-
-/**
- * Mutation to trigger a manual sync on an email account.
- * Call with: mutate(accountId)
- * On success, invalidates the messages cache to reflect newly fetched emails.
- */
-export const useSyncAccount = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (accountId) => postSyncAccount(accountId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["messages"] });
-    },
-  });
-};
-
-/**
- * Mutation to create a new email account.
- * Call with: mutate({ address, host, port, username, password })
- * On success, invalidates the emailAccounts cache.
- */
-export const useCreateAccount = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (body) => createEmailAccount(body),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["emailAccounts"] });
-    },
-  });
-};
-
-/**
- * Hook for fetching the audit log events of a message from the Poller service.
- * Events are sorted ascending by timestamp (oldest first).
- * staleTime: 2 minutes — events don't change once recorded.
- */
-export const useMessageEvents = (messageId, options = {}) => {
-  return useQuery({
-    queryKey: ["messageEvents", messageId],
-    queryFn: ({ signal }) => fetchMessageEvents(messageId, signal),
-    enabled: !!messageId,
-    staleTime: 120000,
-    ...options,
-  });
-};
-
-/**
- * Mutation to update an existing email account.
- * Call with: mutate({ accountId, address, host, port, username, password })
- * On success, invalidates the emailAccounts cache.
- */
-export const useUpdateAccount = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ accountId, ...body }) => updateEmailAccount(accountId, body),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["emailAccounts"] });
-    },
-  });
-};
-
-/**
- * Hook for fetching the processing status of a single attachment.
- * Polls every 3s while the job is QUEUED or IN_PROGRESS.
- * Returns null if the pipeline has not yet started (404).
- */
-export const useAttachmentProcessing = (attachmentId, options = {}) => {
-  return useQuery({
-    queryKey: ["attachmentProcessing", attachmentId],
-    queryFn: ({ signal }) => fetchAttachmentProcessing(attachmentId, signal),
-    enabled: !!attachmentId,
-    staleTime: 10000,
-    refetchInterval: (query) => {
-      const status = query.state.data?.job?.status;
-      return status && ["QUEUED", "IN_PROGRESS"].includes(status) ? 3000 : false;
-    },
-    ...options,
-  });
-};
-
-/**
- * Mutation to retry a failed pipeline processing job.
- * Call with: mutate({ jobId, attachmentId })
- * On success, invalidates the attachmentProcessing cache for that attachment.
- */
-export const useRetryJob = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ jobId }) => postRetryJob(jobId),
-    onSuccess: (_, { attachmentId }) => {
-      queryClient.invalidateQueries({ queryKey: ["attachmentProcessing", attachmentId] });
-    },
-  });
-};
-
-/**
- * Mutation to manually override the AI-generated subject draft.
- * On success, invalidates the subjectContext cache so the panel reflects
- * the new draft and the manuallyRevised flag immediately.
- */
-export const useUpdateSubjectDraft = (messageId) => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (newSubject) => patchSubjectDraft(messageId, newSubject),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["subjectContext", messageId] });
-    },
-  });
-};
-
-/**
- * Hook for fetching document-level AI analysis from the Subject Context Builder.
- * Returns a map of { [rootAttachmentId]: DocumentAnalysis } for easy lookup.
- * Should be enabled only when subjectContext.status === 'completed' (analyses are ready).
- * staleTime: 60s — summaries don't change once generated.
- */
-export const useDocumentAnalysis = (messageId, options = {}) => {
-  return useQuery({
-    queryKey: ["documentAnalysis", messageId],
-    queryFn: async ({ signal }) => {
-      const dtos = await fetchDocumentAnalysis(messageId, signal);
-      if (!dtos) return {};
-      const map = {};
-      dtos.map(transformDocumentAnalysisDto).forEach((item) => {
-        if (item.rootAttachmentId != null) {
-          map[item.rootAttachmentId] = item;
-        }
-      });
-      return map;
-    },
-    enabled: !!messageId,
-    staleTime: 60000,
-    ...options,
-  });
-};
-
-/**
- * Hook for fetching office catalog from the Office Router.
- */
-export const useOfficeCatalog = (options = {}) => {
-  return useQuery({
-    queryKey: ["officeCatalog"],
-    queryFn: ({ signal }) => fetchOfficeCatalog(signal),
-    staleTime: 600000,
-    ...options,
-  });
-};
-
-/**
- * Hook for fetching dashboard statistics.
- * Refreshes every 30 seconds.
- */
-export const useDashboardStats = (options = {}) => {
-  return useQuery({
-    queryKey: ["dashboardStats"],
-    queryFn: ({ signal }) => fetchDashboardStats(signal),
-    refetchInterval: 30000,
-    staleTime: 10000,
-    ...options,
   });
 };
 

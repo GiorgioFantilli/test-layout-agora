@@ -248,16 +248,16 @@ function AiIntelligencePanel({ aiResults, isLoading, hasPendingDocumentUnits, me
   return (
     <div style={{
       border: '1px solid var(--c-border-base)',
-      borderRadius: '10px',
+      borderRadius: '20px',
       overflow: 'hidden',
-      marginBottom: '1.25rem',
+      marginBottom: '1.75rem',
     }}>
       {/* Header banda AI */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
         gap: '0.5rem',
-        padding: '0.55rem 0.9rem',
+        padding: '0.55rem 1.0rem',
         backgroundColor: 'var(--c-bg-offset-2)',
         borderBottom: (aiResults?.status === 'completed' || aiResults?.status === 'manual_review' || aiResults?.status === 'pending')
           ? '1px solid var(--c-border-base)'

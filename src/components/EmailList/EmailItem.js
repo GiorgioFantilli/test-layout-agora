@@ -94,7 +94,7 @@ function EmailItem({ emailId, email, onSelect, isSelected }) {
               <span className="sender-name">{email.sender}</span>
             </div>
             <span className="sender-email">{email.email}</span>
-            {state.selectedAccountId === null && email.recipient && (
+            {state.selectedAccountIds.length !== 1 && email.recipient && (
               <UserIcon email={email.recipient} size="xs" />
             )}
           </div>
@@ -114,8 +114,12 @@ function EmailItem({ emailId, email, onSelect, isSelected }) {
 
           {/* 2. Allegati */}
           <span className="meta-item attachment-item">
-            <i className="fas fa-paperclip"></i>
-            {attachmentCount > 0 ? attachmentText : 'Nessuno'}
+            {attachmentCount > 0 &&
+              <>
+                <i className="fas fa-paperclip"></i>
+                {attachmentText}
+              </>
+            }
           </span>
 
           {/* 3. Pulsante/Badge */}

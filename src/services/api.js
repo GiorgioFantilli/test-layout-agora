@@ -66,7 +66,6 @@ export const fetchMe = async () => {
   }
   return await response.json();
 };
-
 /**
  * Fetch messages from the Poller service.
  */
@@ -76,19 +75,36 @@ export const fetchMessages = async (
   skip = 0,
   statuses = [],
   accountIds = [],
+  extraFilters = {},
+  sortBy = 'date',
+  sortOrder = 'desc'
 ) => {
   try {
-    let url = `${POLLER_API_BASE}/messages/?limit=${limit}&skip=${skip}&order_by=desc`;
+    const finalSortBy = extraFilters?.sort_by || sortBy;
+    const finalSortOrder = extraFilters?.sort_order || sortOrder;
+    let url = `${POLLER_API_BASE}/messages/?limit=${limit}&skip=${skip}&sort_by=${finalSortBy}&sort_order=${finalSortOrder}`;
+
     if (statuses && statuses.length > 0) {
       statuses.forEach((st) => {
-        url += `&status=${encodeURIComponent(st)}`;
+        url += `&status_filter=${encodeURIComponent(st)}`;
       });
     }
+
     if (accountIds && accountIds.length > 0) {
       accountIds.forEach((id) => {
         url += `&account_id=${encodeURIComponent(id)}`;
       });
     }
+
+    if (extraFilters) {
+      Object.keys(extraFilters).forEach((key) => {
+        if (key === 'sort_by' || key === 'sort_order' || key === 'order_by') return; // Skip handled keys
+        if (extraFilters[key] !== undefined && extraFilters[key] !== null && extraFilters[key] !== '') {
+          url += `&${encodeURIComponent(key)}=${encodeURIComponent(extraFilters[key])}`;
+        }
+      });
+    }
+
     const response = await fetch(url, {
       method: "GET",
       headers: {
@@ -97,17 +113,18 @@ export const fetchMessages = async (
       credentials: "include",
       signal,
     });
+
     if (!response.ok) {
       throw new Error(`Error fetching messages: ${response.statusText}`);
     }
-    const data = await response.json();
 
-    const emailsMap = {};
-    data.forEach((msg) => {
-      const transformed = transformMessageDto(msg);
-      emailsMap[transformed.id] = transformed;
-    });
-    return emailsMap;
+    const data = await response.json();
+    const result = data.map((msg) => transformMessageDto(msg));
+
+    return {
+      result,
+      nextSkip: result.length === limit ? skip + limit : null,
+    };
   } catch (error) {
     if (error.name !== "AbortError") {
       console.error("Failed to fetch messages", error);
