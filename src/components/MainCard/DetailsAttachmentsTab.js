@@ -1,9 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import AiButton from "./AiButton";
 import AttachmentItem from "./AttachmentItem";
 import AiIntelligencePanel from "./AiIntelligencePanel";
+import PipelineStatusBar from "./PipelineStatusBar";
 import { formatEmailDateTime } from "../../utils/dateUtils";
 import EmailBodyViewer from "./EmailBodyViewer";
+import { useSubjectContext, useDocumentUnits, useRoutingSuggestion, useDocumentAnalysis } from "../../hooks/useEmails";
 
 function DetailsAttachmentsTab({
   email,
@@ -18,6 +20,22 @@ function DetailsAttachmentsTab({
   isFullscreen,
 }) {
   const [isBodyExpanded, setIsBodyExpanded] = useState(true);
+  const { data: subjectContext, isLoading: isSubjectContextLoading } = useSubjectContext(email?.id);
+  const { data: documentUnits = [] } = useDocumentUnits(email?.id);
+  const { data: routingSuggestion } = useRoutingSuggestion(email?.id);
+  const { data: documentAnalysisMap = {} } = useDocumentAnalysis(email?.id, {
+    enabled: !!email?.id && subjectContext?.status === "completed",
+  });
+  const hasPendingDocumentUnits = documentUnits.some(
+    (du) => du.status === "PROCESSING" || du.status === "AVAILABLE",
+  );
+  const docUnitByAttachmentId = useMemo(() => {
+    const map = {};
+    documentUnits
+      .filter((du) => du.role === "DOCUMENT")
+      .forEach((du) => { map[du.rootAttachmentId] = du; });
+    return map;
+  }, [documentUnits]);
 
   const getInitials = (name) => {
     if (!name) return "?";
@@ -98,17 +116,28 @@ function DetailsAttachmentsTab({
         </div>
       </div>
 
-      {/* ── 2. Oggetto ── */}
+      {/* ── 2. Pipeline status bar ── */}
+      <PipelineStatusBar
+        message={email}
+        documentUnits={documentUnits}
+        subjectContext={subjectContext}
+        routingSuggestion={routingSuggestion}
+        isFullscreen={isFullscreen}
+      />
+
+      {/* ── 3. Oggetto ── */}
       <div className="email-subject-container">
         <h1 className="email-subject-large">{email.subject}</h1>
       </div>
 
-      {/* ── 3. AI Intelligence ── */}
-      <AiIntelligencePanel aiResults={null} />
+      {/* ── 4. AI Intelligence ── */}
+      <div id="ai-intelligence-section">
+        <AiIntelligencePanel aiResults={subjectContext} isLoading={isSubjectContextLoading} hasPendingDocumentUnits={hasPendingDocumentUnits} messageId={email?.id} />
+      </div>
 
-      {/* ── 4. Allegati ── */}
+      {/* ── 5. Allegati ── */}
       {attachments.length > 0 ? (
-        <div className="attachments-section">
+        <div id="attachments-section" className="attachments-section">
           <div className="attachments-header">
             <h3>
               <i className="fas fa-paperclip"></i>
@@ -127,6 +156,8 @@ function DetailsAttachmentsTab({
               <AttachmentItem
                 key={att.id}
                 attachment={att}
+                documentUnit={docUnitByAttachmentId[att.id] ?? null}
+                documentAnalysis={documentAnalysisMap[att.id] ?? null}
                 analysisResult={analysisResults[att.id]}
                 isExternallyLoading={isSynthesizingAll}
                 onAnalyze={() => onAttachmentAnalyze(att.id, att.filename)}
@@ -145,7 +176,7 @@ function DetailsAttachmentsTab({
         </div>
       )}
 
-      {/* ── 5. Corpo messaggio (collassabile) ── */}
+      {/* ── 6. Corpo messaggio (collassabile) ── */}
       {hasBody && (
         <div style={{ marginBottom: '1.5rem' }}>
           <button
