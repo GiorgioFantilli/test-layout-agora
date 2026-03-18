@@ -87,26 +87,52 @@ function scrollToSection(sectionId) {
  *   messageId  — ID del messaggio — usato internamente per i hook
  */
 function PipelineStatusBar({ message, messageId }) {
-  const { data: documentUnits = [] } = useDocumentUnits(messageId);
-  const { data: subjectContext } = useSubjectContext(messageId);
-  const { data: routingSuggestion } = useRoutingSuggestion(messageId);
+  const { data: documentUnits = [], isLoading: isLoadingUnits } = useDocumentUnits(messageId);
+  const { data: subjectContext, isLoading: isLoadingContext } = useSubjectContext(messageId);
+  const { data: routingSuggestion, isLoading: isLoadingSuggestion } = useRoutingSuggestion(messageId);
+
+  // Skeleton finché i tre hook non hanno completato il primo fetch
+  const isReady = !isLoadingUnits && !isLoadingContext && !isLoadingSuggestion;
 
   const statuses = computePhaseStatuses(message, documentUnits, subjectContext, routingSuggestion);
   const availableDocs = documentUnits.filter((du) => du.status === 'AVAILABLE').length;
 
+  const containerStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.15rem',
+    padding: '0.45rem 1rem',
+    borderBottom: '1px solid var(--c-border-base)',
+    backgroundColor: 'var(--c-bg-base)',
+    overflowX: 'auto',
+    flexShrink: 0,
+  };
+
+  if (!isReady) {
+    return (
+      <div style={containerStyle}>
+        {PHASES.map((_, idx) => (
+          <React.Fragment key={idx}>
+            <div style={{
+              width: idx === 0 ? '4.5rem' : idx === 1 ? '3.5rem' : idx === 2 ? '4.5rem' : idx === 3 ? '4.5rem' : '3.5rem',
+              height: '1.4rem',
+              borderRadius: '999px',
+              backgroundColor: 'var(--c-bg-offset-2)',
+              opacity: 0.6,
+              animation: `pipelinePulse 1.2s ease-in-out ${idx * 0.12}s infinite`,
+              flexShrink: 0,
+            }} />
+            {idx < PHASES.length - 1 && (
+              <i className="fas fa-chevron-right" style={{ fontSize: '0.48rem', color: 'var(--c-text-subtle)', opacity: 0.3, margin: '0 0.15rem', flexShrink: 0 }} />
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.15rem',
-        padding: '0.45rem 1rem',
-        borderBottom: '1px solid var(--c-border-base)',
-        backgroundColor: 'var(--c-bg-base)',
-        overflowX: 'auto',
-        flexShrink: 0,
-      }}
-    >
+    <div style={{ ...containerStyle, animation: 'contentFadeIn 0.3s ease-out' }}>
       {PHASES.map((phase, idx) => {
         const status = statuses[idx];
         const styles = STATUS_STYLES[status];

@@ -250,6 +250,8 @@ export const transformMessageDto = (msg) => {
     readDate: msg.status === "read" ? msg.msg_date : null,
     status: frontendStatus,
     account_id: msg.account_id,
+    ingestStatus: msg.ingest_status,
+    parseStatus: msg.parse_status,
     parse_status: msg.parse_status,
     attachments: (msg.attachments || []).map(transformAttachmentDto),
   };
