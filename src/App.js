@@ -4,6 +4,7 @@ import { AppProvider, useAppContext } from "./AppContext";
 import Sidebar from "./components/Sidebar";
 import MainContent from "./components/MainContent";
 import Login from "./components/Login";
+import SystemHealthBanner from "./components/SystemHealthBanner";
 import { useSession } from "./hooks/useAuth";
 
 function AppContent() {
@@ -27,6 +28,7 @@ function AppContent() {
     <div className="main-layout">
       <Sidebar />
       <div className={`content-wrapper ${state.sidebarPinned ? "sidebar--expanded" : ""}`}>
+        <SystemHealthBanner />
         <MainContent />
       </div>
     </div>
