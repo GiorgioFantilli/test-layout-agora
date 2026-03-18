@@ -116,6 +116,120 @@ const decodeMimeSubject = (subject) => {
 };
 
 /**
+ * Maps backend generation_status to frontend status string.
+ */
+const SCB_STATUS_MAP = {
+  COMPLETED: "completed",
+  MANUAL_REVIEW: "manual_review",
+  PENDING: "pending",
+  CONTEXT_READY: "pending",
+  LLM_GENERATION: "pending",
+};
+
+/**
+ * Transforms a Subject Context Builder DTO into the format expected by the frontend.
+ */
+export const transformSubjectContextDto = (dto) => ({
+  status: SCB_STATUS_MAP[dto.generation_status] ?? "pending",
+  subjectDraft: dto.normalized_subject_draft ?? null,
+  confidence: dto.generation_confidence ?? null,
+  documentsUsed: dto.documents_used ?? null,
+  modelUsed: dto.llm_model_used ?? null,
+  failureMode: dto.failure_mode ?? null,
+  manuallyRevised: dto.manually_revised ?? false,
+});
+
+/**
+ * Transforms a Pipeline Executor DocumentUnit DTO into the format expected by the frontend.
+ */
+export const transformDocumentUnitDto = (du) => ({
+  id: du.id,
+  messageId: du.message_id,
+  rootAttachmentId: du.root_attachment_id,
+  filename: du.filename,
+  mimeType: du.mime_type,
+  role: du.role,
+  isProtocollable: du.is_protocollable,
+  isPrimaryCandidate: du.is_primary_candidate,
+  extractionQuality: du.extraction_quality,
+  textExcerpt: du.text_excerpt ?? null,
+  status: du.status,
+  sortOrder: du.sort_order,
+});
+
+/**
+ * Transforms a Protocol MW SenderResolution DTO into the format expected by the frontend.
+ */
+export const transformSenderResolutionDto = (dto) => ({
+  status: (dto.status || '').toLowerCase(),
+  senderKey: dto.sender_key ?? null,
+  candidates: (dto.candidates || []).map((c) => ({
+    codice: c.codice,
+    descrizione: c.descrizione,
+    pec: c.pec ?? null,
+  })),
+  attempts: dto.attempts ?? 0,
+  lastErrorCode: dto.last_error_code ?? null,
+  fetchedAt: dto.fetched_at ?? null,
+});
+
+const ROUTING_STATUS_MAP = {
+  COMPLETED: "completed",
+  MANUAL_REVIEW: "manual_review",
+  QUEUED: "queued",
+  IN_PROGRESS: "in_progress",
+  FAILED_RETRYABLE: "failed",
+  FAILED_FINAL: "failed",
+};
+
+/**
+ * Transforms an Office Router RoutingSuggestion DTO into the format expected by the frontend.
+ */
+export const transformRoutingSuggestion = (dto) => ({
+  status: ROUTING_STATUS_MAP[dto.status] ?? "queued",
+  primaryOfficeCode: dto.primary_office_code ?? null,
+  primaryConfidence: dto.primary_confidence ?? null,
+  candidates: (dto.candidates || []).map((c) => ({
+    rank: c.rank,
+    officeCode: c.office_code,
+    role: c.role,
+    score: c.final_score,
+  })),
+});
+
+/**
+ * Maps backend analysis_status values for document-level analysis.
+ */
+const DSA_STATUS_MAP = {
+  COMPLETED: "completed",
+  MANUAL_REVIEW: "manual_review",
+  PENDING: "pending",
+  TEXT_PREPARED: "pending",
+  CLASSIFIED: "pending",
+  RELEVANCE_EVALUATED: "pending",
+  SUMMARY_GENERATED: "pending",
+};
+
+/**
+ * Transforms a Subject Context Builder DocumentAnalysis DTO into the format expected by the frontend.
+ * Input: one element from GET /messages/{id}/document-analysis
+ */
+export const transformDocumentAnalysisDto = (dto) => {
+  const ssj = dto.structured_summary_json ?? null;
+  return {
+    documentUnitId: dto.document_unit_id,
+    rootAttachmentId: dto.root_attachment_id ?? null,
+    filename: dto.filename ?? null,
+    summary: ssj?.summary ?? null,
+    documentType: ssj?.document_type ?? null,
+    keyEntities: Array.isArray(ssj?.key_entities) ? ssj.key_entities : [],
+    urgencyHint: ssj?.urgency_hint ?? null,
+    generationStatus: DSA_STATUS_MAP[dto.generation_status] ?? "pending",
+    failureMode: dto.failure_mode ?? null,
+  };
+};
+
+/**
  * Transforms a backend MessageRead DTO into the format expected by the frontend.
  */
 export const transformMessageDto = (msg) => {
