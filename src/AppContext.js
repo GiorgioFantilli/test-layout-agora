@@ -9,6 +9,7 @@ const defaultConfig = {
 // Initial state
 const initialState = {
     currentView: 'pending',
+    previousView: 'pending',
     selectedEmailId: null,
     isFullscreen: false,
     emails: {},
@@ -29,6 +30,7 @@ function appReducer(state, action) {
         case "SWITCH_VIEW":
             return {
                 ...state,
+                previousView: state.currentView,
                 currentView: action.payload,
                 isFullscreen: false,
                 selectedAccountIds: [],

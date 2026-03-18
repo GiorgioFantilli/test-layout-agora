@@ -9,9 +9,8 @@ function MainContent() {
   const isDetailsOpen = !!state.selectedEmailId;
   const isDetailsFullscreen = state.isFullscreen;
 
-  // Calculate widths based on 84% total width for main-content
-  const listWidth = (32.5 / 81.5) * 100;
-  const detailsWidth = (47.5 / 81.5) * 100;
+  const listWidth = 45;
+  const detailsWidth = 55;
 
   const listPanelStyle = {
     width: isDetailsFullscreen
@@ -20,7 +19,6 @@ function MainContent() {
         ? `${listWidth}%`
         : "100%",
     opacity: isDetailsFullscreen ? 0 : 1,
-    visibility: isDetailsFullscreen ? "hidden" : "visible",
     overflow: "hidden",
   };
 

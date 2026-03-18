@@ -68,13 +68,17 @@ export const fetchMessages = async (
   statuses = [],
   accountIds = [],
   extraFilters = {},
+  sortBy = 'date',
+  sortOrder = 'desc'
 ) => {
   try {
-    let url = `${POLLER_API_BASE}/messages/?limit=${limit}&skip=${skip}&order_by=desc`;
+    const finalSortBy = extraFilters?.sort_by || sortBy;
+    const finalSortOrder = extraFilters?.sort_order || sortOrder;
+    let url = `${POLLER_API_BASE}/messages/?limit=${limit}&skip=${skip}&sort_by=${finalSortBy}&sort_order=${finalSortOrder}`;
 
     if (statuses && statuses.length > 0) {
       statuses.forEach((st) => {
-        url += `&status=${encodeURIComponent(st)}`;
+        url += `&status_filter=${encodeURIComponent(st)}`;
       });
     }
 
@@ -86,6 +90,7 @@ export const fetchMessages = async (
 
     if (extraFilters) {
       Object.keys(extraFilters).forEach((key) => {
+        if (key === 'sort_by' || key === 'sort_order' || key === 'order_by') return; // Skip handled keys
         if (extraFilters[key] !== undefined && extraFilters[key] !== null && extraFilters[key] !== '') {
           url += `&${encodeURIComponent(key)}=${encodeURIComponent(extraFilters[key])}`;
         }

@@ -94,7 +94,7 @@ function EmailItem({ emailId, email, onSelect, isSelected }) {
               <span className="sender-name">{email.sender}</span>
             </div>
             <span className="sender-email">{email.email}</span>
-            {state.selectedAccountIds.length === 0 && email.recipient && (
+            {state.selectedAccountIds.length !== 1 && email.recipient && (
               <UserIcon email={email.recipient} size="xs" />
             )}
           </div>

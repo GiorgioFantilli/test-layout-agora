@@ -3,7 +3,6 @@ import { useAppContext } from "../../AppContext";
 import { useEmailAccounts } from "../../hooks/useEmails";
 import UserIcon from "../UserIcon";
 
-const PILL_THRESHOLD = 5;
 
 function AccountFilter() {
   const { state, dispatch } = useAppContext();
@@ -50,36 +49,54 @@ function AccountFilter() {
 
   const clearFilter = () => dispatch({ type: "SET_ACCOUNT_FILTER", payload: [] });
 
-  if (accounts.length <= 1) return null;
+  if (accounts.length < 2) return null;
 
-  if (accounts.length <= PILL_THRESHOLD) {
+  // --- Modalità dropdown ricercabile (>= 2 account) ---
+  const hasFilter = selectedAccountIds.length > 0;
+
+  // Icons for the trigger
+  const AccountIcons = () => {
+    if (!hasFilter) {
+      return (
+        <div className="pec-icon-circle">
+          <i className="fas fa-layer-group"></i>
+        </div>
+      );
+    }
+
+    const selectedAccounts = accounts.filter((acc) => selectedAccountIds.includes(acc.id));
+    const maxVisible = 3;
+    const displayAccounts = selectedAccounts.slice(0, maxVisible);
+    const overflow = selectedAccounts.length - maxVisible;
+
     return (
-      <div className="account-filter account-filter--pills">
-        <button
-          className={`account-pill ${selectedAccountIds.length === 0 ? "active" : ""}`}
-          onClick={clearFilter}
-        >
-          Tutte
-        </button>
-        {accounts.map((acc) => (
-          <button
+      <div className="account-icons-stack">
+        {displayAccounts.map((acc, i) => (
+          <UserIcon
             key={acc.id}
-            className={`account-pill ${selectedAccountIds.includes(acc.id) ? "active" : ""}`}
-            onClick={() => toggleAccount(acc.id)}
-            title={acc.address}
-          >
-            {acc.address.split("@")[0]}
-          </button>
+            email={acc.address}
+            size="xs"
+            className="stack-icon"
+            style={{ zIndex: 10 + i }}
+          />
         ))}
+        {overflow > 0 && (
+          <div className="user-icon-bubble user-icon-xs user-icon-overflow">
+            <span>+{overflow}</span>
+          </div>
+        )}
       </div>
     );
-  }
+  };
 
-  // --- Modalità dropdown ricercabile (>5 account) ---
-  const hasFilter = selectedAccountIds.length > 0;
-  const triggerLabel = hasFilter
-    ? `${selectedAccountIds.length} casett${selectedAccountIds.length === 1 ? "a" : "e"} selezionat${selectedAccountIds.length === 1 ? "a" : "e"}`
-    : "Tutte le PEC";
+  const getTriggerLabel = () => {
+    if (!hasFilter) return "Tutte le PEC";
+    if (selectedAccountIds.length === 1) {
+      const acc = accounts.find((a) => a.id === selectedAccountIds[0]);
+      return acc ? acc.address.split("@")[0] : "1 PEC";
+    }
+    return `${selectedAccountIds.length} PEC`;
+  };
 
   const filteredAccounts = accounts.filter((acc) =>
     acc.address.toLowerCase().includes(search.toLowerCase())
@@ -92,8 +109,8 @@ function AccountFilter() {
           className={`account-filter-trigger ${hasFilter ? "active" : ""}`}
           onClick={() => setDropdownOpen((o) => !o)}
         >
-          <i className="fas fa-filter"></i>
-          <span>{triggerLabel}</span>
+          <AccountIcons />
+          <span>{getTriggerLabel()}</span>
           <i className={`fas fa-chevron-down account-filter-chevron ${dropdownOpen ? "open" : ""}`}></i>
         </button>
         {hasFilter && (
@@ -120,7 +137,9 @@ function AccountFilter() {
               className={`account-filter-option ${selectedAccountIds.length === 0 ? "active" : ""}`}
               onClick={clearFilter}
             >
-              <i className="fas fa-layer-group"></i>
+              <div className="pec-icon-circle">
+                <i className="fas fa-layer-group"></i>
+              </div>
               <span>Tutte le PEC</span>
               {selectedAccountIds.length === 0 && (
                 <i className="fas fa-check account-filter-check"></i>

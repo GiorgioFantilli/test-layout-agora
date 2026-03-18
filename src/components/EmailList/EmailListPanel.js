@@ -128,12 +128,13 @@ function EmailListPanel() {
   return (
     <>
       <div
-        key={state.currentView}
-        className="email-list-scroll-area scrollbar-styled content-fade-in"
+        className={`email-list-scroll-area fade-in scrollbar-styled ${state.currentView !== state.previousView ? 'content-fade-in' : ''}`}
       >
         <div className="list-main-header">
-          <h2 className="list-main-title">Posta in arrivo</h2>
-          <span className="list-main-subhead">{subheadText}</span>
+          <div className="title-subhead-stack">
+            <h2 className="list-main-title">Posta in arrivo</h2>
+            <span className="list-main-subhead">{subheadText}</span>
+          </div>
           <AccountFilter />
           <div className="header-right-actions">
             <button
