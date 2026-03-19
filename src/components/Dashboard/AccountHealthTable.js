@@ -1,5 +1,53 @@
 import React, { useState } from 'react';
 import { useSyncAccount, useToggleAccount } from '../../hooks/useEmails';
+import { formatTimeAgo, formatEmailDateTime } from '../../utils/dateUtils';
+
+function StatusBadge({ acc }) {
+  if (!acc.enabled) {
+    return (
+      <span className="dash-badge dash-badge-neutral">
+        <span className="dash-bdot"></span>Disabilitata
+      </span>
+    );
+  }
+  if (acc.last_sync_error) {
+    return (
+      <span className="dash-badge dash-badge-err">
+        <span className="dash-bdot"></span>Errore di connessione
+      </span>
+    );
+  }
+  return (
+    <span className="dash-badge dash-badge-ok">
+      <span className="dash-bdot"></span>Attiva e raggiungibile
+    </span>
+  );
+}
+
+function SyncCell({ acc }) {
+  if (!acc.enabled) {
+    return (
+      <div>
+        <div className="dash-sync-rel" style={{ color: 'var(--d-text-subtle)' }}>Non disponibile</div>
+        <div className="dash-sync-abs">Casella non attiva</div>
+      </div>
+    );
+  }
+  if (!acc.last_sync_time) {
+    return <span style={{ color: 'var(--d-text-subtle)', fontStyle: 'italic', fontSize: '13px' }}>Mai sincronizzata</span>;
+  }
+
+  const relative = formatTimeAgo(acc.last_sync_time);
+  const absolute = formatEmailDateTime(acc.last_sync_time);
+  const hasError = !!acc.last_sync_error;
+
+  return (
+    <div>
+      <div className={`dash-sync-rel${hasError ? ' dash-sync-err' : ''}`}>{relative}</div>
+      <div className="dash-sync-abs">{absolute}</div>
+    </div>
+  );
+}
 
 function AccountRow({ acc }) {
   const [syncFeedback, setSyncFeedback] = useState(null); // null | 'ok' | 'error'
@@ -28,122 +76,77 @@ function AccountRow({ acc }) {
   };
 
   return (
-    <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-      {/* Account */}
-      <td className="py-3 px-4 text-sm text-gray-800 dark:text-gray-200 font-medium">
-        <div className="flex items-center gap-2">
-          <i className="fas fa-envelope text-gray-400 text-xs shrink-0"></i>
-          <span className="truncate max-w-xs" title={acc.address}>{acc.address}</span>
-        </div>
+    <tr className={hasError && isEnabled ? 'row-err' : ''}>
+      {/* Casella PEC */}
+      <td>
+        <div className="dash-email-addr" title={acc.address}>{acc.address}</div>
+        {acc.label && <div className="dash-email-label">{acc.label}</div>}
       </td>
 
-      {/* Stato abilitazione */}
-      <td className="py-3 px-4 text-sm">
-        {isEnabled ? (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-            <i className="fas fa-circle text-[8px]"></i> Attivo
-          </span>
-        ) : (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">
-            <i className="fas fa-circle text-[8px]"></i> Disabilitato
-          </span>
-        )}
-      </td>
-
-      {/* Connessione */}
-      <td className="py-3 px-4 text-sm font-medium">
-        {!isEnabled ? (
-          <span className="text-gray-400 dark:text-gray-500 flex items-center gap-1.5">
-            <i className="fas fa-minus-circle"></i> Sospeso
-          </span>
-        ) : hasError ? (
-          <span className="text-red-600 dark:text-red-400 flex items-center gap-1.5">
-            <i className="fas fa-times-circle"></i> Errore
-          </span>
-        ) : (
-          <span className="text-green-600 dark:text-green-400 flex items-center gap-1.5">
-            <i className="fas fa-check-circle"></i> OK
-          </span>
-        )}
+      {/* Stato (badge unificato abilitazione + connessione) */}
+      <td>
+        <StatusBadge acc={acc} />
       </td>
 
       {/* Ultima sincronizzazione */}
-      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-        {acc.last_sync_time
-          ? new Date(acc.last_sync_time).toLocaleString('it-IT')
-          : <span className="text-gray-400 italic">Mai</span>
-        }
+      <td>
+        <SyncCell acc={acc} />
       </td>
 
       {/* Errori oggi */}
-      <td className="py-3 px-4 text-sm text-center">
+      <td style={{ textAlign: 'center' }}>
         {acc.errors_today > 0 ? (
-          <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 text-xs font-bold">
-            {acc.errors_today}
-          </span>
+          <span className="dash-err-count">{acc.errors_today}</span>
         ) : (
-          <span className="text-gray-400 dark:text-gray-500">—</span>
+          <span style={{ color: 'var(--d-text-subtle)' }}>—</span>
         )}
       </td>
 
-      {/* Ultimo errore */}
-      <td className="py-3 px-4 text-sm text-gray-500 dark:text-gray-400 max-w-[180px]">
+      {/* Messaggio di errore */}
+      <td>
         {acc.last_sync_error ? (
-          <span className="truncate block text-red-500 dark:text-red-400" title={acc.last_sync_error}>
+          <span className="dash-err-msg" title={acc.last_sync_error}>
             {acc.last_sync_error}
           </span>
         ) : (
-          <span className="text-gray-300 dark:text-gray-600">—</span>
+          <span style={{ color: 'var(--d-text-subtle)' }}>—</span>
         )}
       </td>
 
       {/* Azioni */}
-      <td className="py-3 px-4 text-sm">
-        <div className="flex items-center gap-2">
-          {/* Sync manuale */}
+      <td>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           {isEnabled && (
             <button
               onClick={handleSync}
               disabled={syncMutation.isPending}
               title="Sincronizza ora"
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium border transition-colors
-                ${syncFeedback === 'ok'
-                  ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800'
-                  : syncFeedback === 'error'
-                    ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800'
-                    : 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/30'
-                }
-                disabled:opacity-60 disabled:cursor-not-allowed`}
+              className={`dash-act-btn dash-act-sync${syncFeedback === 'ok' ? ' ok' : syncFeedback === 'error' ? ' err' : ''}`}
             >
               {syncMutation.isPending ? (
-                <><i className="fas fa-spinner fa-spin text-[10px]"></i> Sync...</>
+                <><i className="fas fa-spinner fa-spin" style={{ fontSize: '10px' }}></i> Sync…</>
               ) : syncFeedback === 'ok' ? (
-                <><i className="fas fa-check text-[10px]"></i> Avviato</>
+                <><i className="fas fa-check" style={{ fontSize: '10px' }}></i> Avviata</>
               ) : syncFeedback === 'error' ? (
-                <><i className="fas fa-times text-[10px]"></i> Errore</>
+                <><i className="fas fa-times" style={{ fontSize: '10px' }}></i> Errore</>
               ) : (
-                <><i className="fas fa-sync text-[10px]"></i> Sync</>
+                <><i className="fas fa-sync" style={{ fontSize: '10px' }}></i> Sincronizza</>
               )}
             </button>
           )}
 
-          {/* Abilita / Disabilita */}
           <button
             onClick={handleToggle}
             disabled={toggleMutation.isPending}
-            title={isEnabled ? 'Disabilita account' : 'Abilita account'}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium border transition-colors disabled:opacity-60 disabled:cursor-not-allowed
-              ${isEnabled
-                ? 'bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 dark:hover:bg-red-900/20 dark:hover:text-red-400'
-                : 'bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600 hover:bg-green-50 hover:text-green-600 hover:border-green-200 dark:hover:bg-green-900/20 dark:hover:text-green-400'
-              }`}
+            title={isEnabled ? 'Disabilita casella' : 'Abilita casella'}
+            className={`dash-act-btn ${isEnabled ? 'dash-act-disable' : 'dash-act-enable'}`}
           >
             {toggleMutation.isPending ? (
-              <i className="fas fa-spinner fa-spin text-[10px]"></i>
+              <i className="fas fa-spinner fa-spin" style={{ fontSize: '10px' }}></i>
             ) : isEnabled ? (
-              <><i className="fas fa-pause text-[10px]"></i> Disabilita</>
+              <><i className="fas fa-pause" style={{ fontSize: '10px' }}></i> Disabilita</>
             ) : (
-              <><i className="fas fa-play text-[10px]"></i> Abilita</>
+              <><i className="fas fa-play" style={{ fontSize: '10px' }}></i> Abilita</>
             )}
           </button>
         </div>
@@ -155,27 +158,26 @@ function AccountRow({ acc }) {
 function AccountHealthTable({ accounts }) {
   if (!accounts || accounts.length === 0) {
     return (
-      <p className="text-gray-500 dark:text-gray-400 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700 italic">
-        Nessun account monitorato al momento.
+      <p style={{ color: 'var(--d-text-subtle)', padding: '16px', fontStyle: 'italic', fontSize: '13px' }}>
+        Nessuna casella configurata al momento.
       </p>
     );
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-      <table className="min-w-full text-left border-collapse">
-        <thead className="bg-gray-50 dark:bg-gray-700/50">
-          <tr className="border-b border-gray-200 dark:border-gray-700">
-            <th className="py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Account</th>
-            <th className="py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Stato</th>
-            <th className="py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Connessione</th>
-            <th className="py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ultima Sync</th>
-            <th className="py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center">Err. Oggi</th>
-            <th className="py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ultimo Errore</th>
-            <th className="py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Azioni</th>
+    <div className="dash-tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Casella PEC</th>
+            <th>Stato</th>
+            <th>Ultima sincronizzazione</th>
+            <th style={{ textAlign: 'center' }}>Errori oggi</th>
+            <th>Messaggio di errore</th>
+            <th>Azioni</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800">
+        <tbody>
           {accounts.map((acc) => (
             <AccountRow key={acc.id} acc={acc} />
           ))}

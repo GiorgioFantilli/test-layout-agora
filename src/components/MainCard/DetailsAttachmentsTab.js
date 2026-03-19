@@ -40,7 +40,7 @@ function DetailsAttachmentsTab({
     if (!name) return "?";
     return name.split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase();
   };
-
+  // TODO capire se email.body é un campo che esiste davvero
   const hasBody = !!(email.body_html || email.body || email.body_text);
 
   return (
