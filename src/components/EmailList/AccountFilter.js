@@ -148,11 +148,14 @@ function AccountFilter() {
             {filteredAccounts.map((acc) => (
               <button
                 key={acc.id}
-                className={`account-filter-option ${selectedAccountIds.includes(acc.id) ? "active" : ""}`}
+                className={`account-filter-option ${selectedAccountIds.includes(acc.id) ? "active" : ""} ${acc.enabled === false ? "account-filter-option--disabled" : ""}`}
                 onClick={() => toggleAccount(acc.id)}
               >
-                <UserIcon email={acc.address} size="xs" />
+                <UserIcon email={acc.address} size="xs" className={acc.enabled === false ? "account-icon--muted" : ""} />
                 <span title={acc.address}>{acc.address}</span>
+                {acc.enabled === false && (
+                  <span className="account-filter-disabled-tag">Inattiva</span>
+                )}
                 {selectedAccountIds.includes(acc.id) && (
                   <i className="fas fa-check account-filter-check"></i>
                 )}

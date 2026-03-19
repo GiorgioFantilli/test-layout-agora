@@ -4,7 +4,7 @@ import { formatEmailDateTime } from '../../utils/dateUtils';
 import { useParsedMessage } from '../../hooks/useEmails';
 import UserIcon from '../UserIcon';
 
-function EmailItem({ emailId, email, onSelect, isSelected }) {
+function EmailItem({ emailId, email, onSelect, isSelected, isAccountDisabled }) {
   const { state, dispatch } = useAppContext();
   const [isLoading, setIsLoading] = useState(false);
   const isMounted = useRef(true);
@@ -52,7 +52,8 @@ function EmailItem({ emailId, email, onSelect, isSelected }) {
 
   const itemClasses = [
     "email-item group",
-    isSelected ? "email-selected" : ""
+    isSelected ? "email-selected" : "",
+    isAccountDisabled ? "email-item--account-disabled" : ""
   ].filter(Boolean).join(" ");
 
   const aiButtonClasses = [
@@ -95,7 +96,11 @@ function EmailItem({ emailId, email, onSelect, isSelected }) {
             </div>
             <span className="sender-email">{email.email}</span>
             {state.selectedAccountIds.length !== 1 && email.recipient && (
-              <UserIcon email={email.recipient} size="xs" />
+              <UserIcon
+                email={email.recipient}
+                size="xs"
+                style={isAccountDisabled ? { filter: 'grayscale(1)', opacity: 0.5 } : undefined}
+              />
             )}
           </div>
           <p className="email-subject">{email.subject}</p>

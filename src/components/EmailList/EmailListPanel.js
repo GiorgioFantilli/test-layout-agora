@@ -8,7 +8,7 @@ import { useAppContext } from "../../AppContext";
 import EmailItem from "./EmailItem";
 import AccountFilter from "./AccountFilter";
 import SearchModal from '../SearchModal';
-import { useMessages } from "../../hooks/useEmails";
+import { useMessages, useEmailAccounts } from "../../hooks/useEmails";
 import { BACKEND_STATUS, FRONTEND_STATUS } from "../../services/dtoMappers";
 
 // Sentinel component that triggers an action when it enters the viewport
@@ -63,6 +63,12 @@ function EmailListPanel() {
   const currentStatuses = useMemo(
     () => isPendingView ? [BACKEND_STATUS.PERSISTED] : [BACKEND_STATUS.PROCESSED],
     [isPendingView]
+  );
+
+  const { data: accounts = [] } = useEmailAccounts();
+  const disabledAccountIds = useMemo(
+    () => new Set(accounts.filter(a => !a.enabled).map(a => String(a.id))),
+    [accounts]
   );
 
   const {
@@ -123,6 +129,16 @@ function EmailListPanel() {
       (state.selectedAccountIds?.length === 0 || state.selectedAccountIds?.some(aid => String(aid) === String(email.account_id)))
   );
 
+  const currentEmails = isPendingView ? pendingEmails : processedEmails;
+  const visibleDisabledAccounts = useMemo(() => {
+    const visibleDisabledIds = new Set(
+      currentEmails
+        .filter(([, email]) => disabledAccountIds.has(String(email.account_id)))
+        .map(([, email]) => String(email.account_id))
+    );
+    return accounts.filter(a => visibleDisabledIds.has(String(a.id)));
+  }, [currentEmails, disabledAccountIds, accounts]);
+
   const subheadText = state.currentView === "pending" ? "Da Protocollare" : "Protocollate";
 
   return (
@@ -155,6 +171,24 @@ function EmailListPanel() {
           </div>
         </div>
 
+        {visibleDisabledAccounts.length > 0 && (
+          <div className="disabled-accounts-banner">
+            <i className="fas fa-pause-circle"></i>
+            <span>
+              {visibleDisabledAccounts.length === 1
+                ? <><strong>{visibleDisabledAccounts[0].address}</strong> è inattiva — non riceverà nuovi messaggi</>
+                : <>Alcune caselle visibili sono inattive — non riceveranno nuovi messaggi</>
+              }
+            </span>
+            <button
+              className="disabled-accounts-banner-cta"
+              onClick={() => dispatch({ type: 'SWITCH_VIEW', payload: 'dashboard' })}
+            >
+              Gestisci <i className="fas fa-arrow-right"></i>
+            </button>
+          </div>
+        )}
+
         {state.currentView === "pending" ? (
           <div id="pending-section">
             <div id="email-list" className="email-list-container">
@@ -165,6 +199,7 @@ function EmailListPanel() {
                   email={email}
                   onSelect={handleSelectEmail}
                   isSelected={state.selectedEmailId === id}
+                  isAccountDisabled={disabledAccountIds.has(String(email.account_id))}
                 />
               ))}
               <Sentinel hasMore={hasNextPage} isLoading={isFetchingNextPage} onVisible={loadMore} />
@@ -186,6 +221,7 @@ function EmailListPanel() {
                     email={email}
                     onSelect={handleSelectEmail}
                     isSelected={state.selectedEmailId === id}
+                    isAccountDisabled={disabledAccountIds.has(String(email.account_id))}
                   />
                 ))}
               <Sentinel hasMore={hasNextPage} isLoading={isFetchingNextPage} onVisible={loadMore} />
