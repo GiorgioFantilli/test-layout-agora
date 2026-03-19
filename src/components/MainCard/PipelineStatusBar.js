@@ -27,6 +27,10 @@ const STATUS_ICON = {
 
 const INGEST_DONE = ['READY_TO_PARSE', 'DELETED_FROM_SERVER'];
 const INGEST_ERROR = ['QUARANTINED', 'FAILED_FETCH', 'FAILED_STORAGE', 'FAILED_DB', 'FAILED_DELETE'];
+// parse_status reali: NULL | IN_PROGRESS | PARSED | RETRYING | QUARANTINED
+const PARSE_DONE = ['PARSED'];
+const PARSE_ERROR = ['QUARANTINED'];
+const PARSE_IN_PROGRESS = ['IN_PROGRESS', 'RETRYING'];
 
 function computePhaseStatuses(message, documentUnits, subjectContext, routingSuggestion) {
   let p1 = 'waiting';
@@ -39,18 +43,27 @@ function computePhaseStatuses(message, documentUnits, subjectContext, routingSug
   let p2 = 'waiting';
   if (p1 === 'done') {
     const ps = message?.parseStatus;
-    if (ps === 'IN_PROGRESS') p2 = 'in_progress';
-    else if (ps === 'FAILED') p2 = 'error';
-    else if (ps === 'PARSED' || ps === 'ANALYZED') p2 = 'done';
+    if (PARSE_DONE.includes(ps)) p2 = 'done';
+    else if (PARSE_ERROR.includes(ps)) p2 = 'error';
+    else if (PARSE_IN_PROGRESS.includes(ps)) p2 = 'in_progress';
   }
 
+  // Phase 3: Estrazione (document_units)
+  // document_unit.status reali: AVAILABLE | SUPERSEDED | HIDDEN  (nessun FAILED)
+  // Fallback: se il SCB ha già dati, il backend ha già finalizzato l'estrazione.
   let p3 = 'waiting';
   if (p2 === 'done') {
     const units = documentUnits || [];
-    if (units.length === 0) p3 = 'in_progress';
-    else if (units.some((du) => du.status === 'AVAILABLE')) p3 = 'done';
-    else if (units.every((du) => du.status === 'FAILED')) p3 = 'error';
-    else p3 = 'in_progress';
+    const hasAvailable = units.some((du) => du.status === 'AVAILABLE');
+    const aiCompleted = subjectContext?.status === 'completed' || subjectContext?.status === 'manual_review';
+    if (hasAvailable || aiCompleted) {
+      p3 = 'done';
+    } else if (units.length > 0) {
+      // Unità presenti ma nessuna AVAILABLE (es. tutte SUPERSEDED/HIDDEN) → warning
+      p3 = 'warning';
+    } else {
+      p3 = 'in_progress';
+    }
   }
 
   let p4 = 'waiting';
@@ -58,7 +71,7 @@ function computePhaseStatuses(message, documentUnits, subjectContext, routingSug
     const s = subjectContext.status;
     if (s === 'completed') p4 = 'done';
     else if (s === 'manual_review') p4 = 'warning';
-    else if (s === 'pending' || s === 'queued') p4 = 'in_progress';
+    else if (s === 'pending') p4 = 'in_progress';
   }
 
   let p5 = 'waiting';
