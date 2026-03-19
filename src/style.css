@@ -196,7 +196,7 @@ html {
 }
 
 body {
-    font-family: "Lato", "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+    font-family: "Titillium Web", "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
     height: 100dvh;
     overflow: hidden;
     background-color: var(--c-bg-base);
