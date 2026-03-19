@@ -712,6 +712,60 @@ export const fetchSystemHealth = async (signal) => {
 };
 
 /**
+ * Fetch daily AI processing summary from the Subject Context Builder service.
+ * Returns { completed_today, manual_review_today, pending_count }.
+ */
+export const fetchDailySummary = async (signal) => {
+  try {
+    const response = await fetch(`${SCB_API_BASE}/stats/daily-summary`, {
+      credentials: "include",
+      signal,
+    });
+    if (!response.ok) throw new Error(`Daily summary error: ${response.statusText}`);
+    return await response.json();
+  } catch (error) {
+    if (error.name !== "AbortError") console.error("Failed to fetch daily summary", error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch AI subject revision rate from the Subject Context Builder service.
+ * Returns { total_completed, manually_revised, accepted_pct, revised_pct }.
+ */
+export const fetchRevisionRate = async (signal) => {
+  try {
+    const response = await fetch(`${SCB_API_BASE}/stats/revision-rate`, {
+      credentials: "include",
+      signal,
+    });
+    if (!response.ok) throw new Error(`Revision rate error: ${response.statusText}`);
+    return await response.json();
+  } catch (error) {
+    if (error.name !== "AbortError") console.error("Failed to fetch revision rate", error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch pipeline funnel distribution from the Poller service.
+ * Returns { ingest_ready, parsing, ai_processing, completed, failed }.
+ */
+export const fetchPipelineFunnel = async (signal) => {
+  try {
+    const response = await fetch(`${POLLER_API_BASE}/stats/pipeline-funnel`, {
+      credentials: "include",
+      signal,
+    });
+    if (!response.ok) throw new Error(`Pipeline funnel error: ${response.statusText}`);
+    return await response.json();
+  } catch (error) {
+    if (error.name !== "AbortError") console.error("Failed to fetch pipeline funnel", error);
+    throw error;
+  }
+};
+
+/**
  * Fetch dashboard statistics from the Poller service.
  */
 export const fetchDashboardStats = async (signal) => {

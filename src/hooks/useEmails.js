@@ -23,6 +23,9 @@ import {
   fetchOfficeCatalog,
   fetchDashboardStats,
   fetchSystemHealth,
+  fetchDailySummary,
+  fetchRevisionRate,
+  fetchPipelineFunnel,
 } from "../services/api";
 import {
   transformSubjectContextDto,
@@ -115,8 +118,12 @@ export const useSubjectContext = (messageId, options = {}) => {
     },
     enabled: !!messageId,
     staleTime: 30000,
-    refetchInterval: (query) =>
-      query.state.data?.status === "pending" ? 5000 : false,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      if (status === "pending") return 5000;          // SCB in elaborazione → poll veloce
+      if (query.state.data === null) return 15000;    // SCB non ancora partito → poll lento
+      return false;                                   // completed/manual_review → stop
+    },
     ...options,
   });
 };
@@ -390,6 +397,51 @@ export const useDashboardStats = (options = {}) => {
   return useQuery({
     queryKey: ["dashboardStats"],
     queryFn: ({ signal }) => fetchDashboardStats(signal),
+    refetchInterval: 30000,
+    staleTime: 10000,
+    ...options,
+  });
+};
+
+/**
+ * Hook for fetching daily AI processing summary from the Subject Context Builder.
+ * Returns { completed_today, manual_review_today, pending_count }.
+ * Refreshes every 30 seconds.
+ */
+export const useDailySummary = (options = {}) => {
+  return useQuery({
+    queryKey: ["dailySummary"],
+    queryFn: ({ signal }) => fetchDailySummary(signal),
+    refetchInterval: 30000,
+    staleTime: 10000,
+    ...options,
+  });
+};
+
+/**
+ * Hook for fetching AI subject revision rate from the Subject Context Builder.
+ * Returns { total_completed, manually_revised, accepted_pct, revised_pct }.
+ * Refreshes every 60 seconds (dato meno urgente).
+ */
+export const useRevisionRate = (options = {}) => {
+  return useQuery({
+    queryKey: ["revisionRate"],
+    queryFn: ({ signal }) => fetchRevisionRate(signal),
+    refetchInterval: 60000,
+    staleTime: 30000,
+    ...options,
+  });
+};
+
+/**
+ * Hook for fetching pipeline funnel distribution from the Poller.
+ * Returns { ingest_ready, parsing, ai_processing, completed, failed }.
+ * Refreshes every 30 seconds.
+ */
+export const usePipelineFunnel = (options = {}) => {
+  return useQuery({
+    queryKey: ["pipelineFunnel"],
+    queryFn: ({ signal }) => fetchPipelineFunnel(signal),
     refetchInterval: 30000,
     staleTime: 10000,
     ...options,
