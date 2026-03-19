@@ -1,16 +1,3 @@
-export const BACKEND_STATUS = {
-  PERSISTED: "PERSISTED",
-  PROCESSED: "PROCESSED",
-};
-
-export const BACKEND_PARSE_STATUS = {
-  PENDING: "PENDING",
-  IN_PROGRESS: "IN_PROGRESS",
-  PARSED: "PARSED",
-  ANALYZED: "ANALYZED",
-  FAILED: "FAILED",
-};
-
 export const FRONTEND_STATUS = {
   PENDING: "pending",
   ANALYZED: "analyzed",
@@ -18,31 +5,23 @@ export const FRONTEND_STATUS = {
 };
 
 /**
- * Maps backend statuses (from Poller and Parser) to a simplified frontend status.
+ * Maps backend statuses to a simplified frontend status.
+ *
+ * ANALYZED: generation_status = COMPLETED o MANUAL_REVIEW — pronto per l'operatore.
+ * PROCESSED: stato locale temporaneo impostato da PROTOCOL_EMAIL in AppContext
+ *            per feedback UI immediato (non deriva dal backend).
+ * PENDING: tutto il resto (pipeline in corso o non ancora avviata).
  */
 export const mapBackendStatusToFrontend = (
-  backendStatus,
-  backendParseStatus,
+  _ingestStatus,
+  _parseStatus,
+  generationStatus,
 ) => {
-  const statusUpper = (backendStatus || "").toUpperCase();
-  const parseStatusUpper = (backendParseStatus || "").toUpperCase();
-
-  let frontendStatus = FRONTEND_STATUS.PENDING;
-
-  if (statusUpper === BACKEND_STATUS.PROCESSED) {
-    frontendStatus = FRONTEND_STATUS.PROCESSED;
-  } else if (statusUpper === BACKEND_STATUS.PERSISTED) {
-    if (
-      parseStatusUpper === BACKEND_PARSE_STATUS.PARSED ||
-      parseStatusUpper === BACKEND_PARSE_STATUS.ANALYZED
-    ) {
-      frontendStatus = FRONTEND_STATUS.ANALYZED;
-    } else {
-      frontendStatus = FRONTEND_STATUS.PENDING;
-    }
+  const genUpper = (generationStatus || "").toUpperCase();
+  if (genUpper === "COMPLETED" || genUpper === "MANUAL_REVIEW") {
+    return FRONTEND_STATUS.ANALYZED;
   }
-
-  return frontendStatus;
+  return FRONTEND_STATUS.PENDING;
 };
 
 /**
@@ -161,7 +140,7 @@ export const transformDocumentUnitDto = (du) => ({
  * Transforms a Protocol MW SenderResolution DTO into the format expected by the frontend.
  */
 export const transformSenderResolutionDto = (dto) => ({
-  status: (dto.status || '').toLowerCase(),
+  status: (dto.status || "").toLowerCase(),
   senderKey: dto.sender_key ?? null,
   candidates: (dto.candidates || []).map((c) => ({
     codice: c.codice,
@@ -235,8 +214,9 @@ export const transformDocumentAnalysisDto = (dto) => {
 export const transformMessageDto = (msg) => {
   // Map backend status to frontend status
   const frontendStatus = mapBackendStatusToFrontend(
-    msg.status,
+    msg.ingest_status,
     msg.parse_status,
+    msg.generation_status,
   );
 
   return {
@@ -253,6 +233,7 @@ export const transformMessageDto = (msg) => {
     ingestStatus: msg.ingest_status,
     parseStatus: msg.parse_status,
     parse_status: msg.parse_status,
+    generationStatus: msg.generation_status ?? null,
     attachments: (msg.attachments || []).map(transformAttachmentDto),
   };
 };

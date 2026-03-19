@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { useAppContext } from "../AppContext";
 import { useSession, useLogout } from "../hooks/useAuth";
 import { useMessageCount } from "../hooks/useEmails";
-import { BACKEND_STATUS } from "../services/dtoMappers";
 import AccountManagementPanel from "./AccountManagementPanel";
 
 function Sidebar() {
@@ -11,12 +10,24 @@ function Sidebar() {
   const { data: user } = useSession();
   const logoutMutation = useLogout();
 
-  const { data: pendingCount = 0 } = useMessageCount([
-    BACKEND_STATUS.PERSISTED,
-  ]);
-  const { data: processedCount = 0 } = useMessageCount([
-    BACKEND_STATUS.PROCESSED,
-  ]);
+  // "Da lavorare": pipeline completata, in attesa di azione operatore
+  const { data: readyCount = 0 } = useMessageCount(
+    [],
+    {},
+    [],
+    ["COMPLETED", "MANUAL_REVIEW"],
+    false,
+  );
+  // "In elaborazione": pipeline in corso o non ancora avviata, senza errori
+  const { data: processingCount = 0 } = useMessageCount(
+    [],
+    {},
+    [],
+    ["NULL", "PENDING", "CONTEXT_READY", "LLM_GENERATION"],
+    false,
+  );
+  // "In errore": ingest o parsing in stato di errore
+  const { data: errorCount = 0 } = useMessageCount([], {}, [], [], true);
 
   const handleViewChange = (view) => {
     dispatch({ type: "SWITCH_VIEW", payload: view });
@@ -62,25 +73,40 @@ function Sidebar() {
         {/* Navigation */}
         <nav className="sidebar-nav">
           <button
-            className={`sidebar-nav-item ${state.currentView === "pending" ? "active" : ""}`}
-            data-count={pendingCount || ""}
-            onClick={() => handleViewChange("pending")}
-            title={!expanded ? "Da Protocollare" : undefined}
+            className={`sidebar-nav-item ${state.currentView === "ready" ? "active" : ""}`}
+            data-count={readyCount || ""}
+            onClick={() => handleViewChange("ready")}
+            title={!expanded ? "Da lavorare" : undefined}
           >
-            <i className="fas fa-clock sidebar-nav-icon"></i>
-            <span className="sidebar-nav-label">Da Protocollare</span>
-            <span className="sidebar-nav-badge">{pendingCount}</span>
+            <i className="fas fa-inbox sidebar-nav-icon"></i>
+            <span className="sidebar-nav-label">Da lavorare</span>
+            <span className="sidebar-nav-badge">{readyCount}</span>
           </button>
 
           <button
-            className={`sidebar-nav-item ${state.currentView === "processed" ? "active" : ""}`}
-            data-count={processedCount || ""}
-            onClick={() => handleViewChange("processed")}
-            title={!expanded ? "Protocollate" : undefined}
+            className={`sidebar-nav-item ${state.currentView === "processing" ? "active" : ""}`}
+            data-count={processingCount || ""}
+            onClick={() => handleViewChange("processing")}
+            title={!expanded ? "In elaborazione" : undefined}
           >
-            <i className="fas fa-check-circle sidebar-nav-icon"></i>
-            <span className="sidebar-nav-label">Protocollate</span>
-            <span className="sidebar-nav-badge">{processedCount}</span>
+            <i className="fas fa-spinner sidebar-nav-icon"></i>
+            <span className="sidebar-nav-label">In elaborazione</span>
+            <span className="sidebar-nav-badge">{processingCount}</span>
+          </button>
+
+          <button
+            className={`sidebar-nav-item sidebar-nav-item--error ${state.currentView === "error" ? "active" : ""}`}
+            data-count={errorCount || ""}
+            onClick={() => handleViewChange("error")}
+            title={!expanded ? "In errore" : undefined}
+          >
+            <i className="fas fa-exclamation-triangle sidebar-nav-icon"></i>
+            <span className="sidebar-nav-label">In errore</span>
+            {errorCount > 0 && (
+              <span className="sidebar-nav-badge sidebar-nav-badge--error">
+                {errorCount}
+              </span>
+            )}
           </button>
           <button
             className={`sidebar-nav-item ${state.currentView === "dashboard" ? "active" : ""}`}

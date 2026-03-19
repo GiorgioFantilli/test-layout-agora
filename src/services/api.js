@@ -76,8 +76,11 @@ export const fetchMessages = async (
   statuses = [],
   accountIds = [],
   extraFilters = {},
-  sortBy = 'date',
-  sortOrder = 'desc'
+  sortBy = "date",
+  sortOrder = "desc",
+  parseStatuses = [],
+  generationStatuses = [],
+  hasErrors = null,
 ) => {
   try {
     const finalSortBy = extraFilters?.sort_by || sortBy;
@@ -90,6 +93,22 @@ export const fetchMessages = async (
       });
     }
 
+    if (parseStatuses && parseStatuses.length > 0) {
+      parseStatuses.forEach((st) => {
+        url += `&parse_status_filter=${encodeURIComponent(st)}`;
+      });
+    }
+
+    if (generationStatuses && generationStatuses.length > 0) {
+      generationStatuses.forEach((st) => {
+        url += `&generation_status_filter=${encodeURIComponent(st)}`;
+      });
+    }
+
+    if (hasErrors !== null && hasErrors !== undefined) {
+      url += `&has_errors=${hasErrors}`;
+    }
+
     if (accountIds && accountIds.length > 0) {
       accountIds.forEach((id) => {
         url += `&account_id=${encodeURIComponent(id)}`;
@@ -98,8 +117,13 @@ export const fetchMessages = async (
 
     if (extraFilters) {
       Object.keys(extraFilters).forEach((key) => {
-        if (key === 'sort_by' || key === 'sort_order' || key === 'order_by') return; // Skip handled keys
-        if (extraFilters[key] !== undefined && extraFilters[key] !== null && extraFilters[key] !== '') {
+        if (key === "sort_by" || key === "sort_order" || key === "order_by")
+          return;
+        if (
+          extraFilters[key] !== undefined &&
+          extraFilters[key] !== null &&
+          extraFilters[key] !== ""
+        ) {
           url += `&${encodeURIComponent(key)}=${encodeURIComponent(extraFilters[key])}`;
         }
       });
@@ -361,12 +385,17 @@ export const fetchRoutingSuggestion = async (messageId, signal) => {
     );
     if (response.status === 404) return null;
     if (!response.ok) {
-      throw new Error(`Error fetching routing suggestion: ${response.statusText}`);
+      throw new Error(
+        `Error fetching routing suggestion: ${response.statusText}`,
+      );
     }
     return await response.json();
   } catch (error) {
     if (error.name !== "AbortError") {
-      console.error(`Failed to fetch routing suggestion for ${messageId}`, error);
+      console.error(
+        `Failed to fetch routing suggestion for ${messageId}`,
+        error,
+      );
     }
     throw error;
   }
@@ -387,7 +416,10 @@ export const postRoutingDecision = async (messageId, body) => {
   );
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || `Error posting routing decision: ${response.statusText}`);
+    throw new Error(
+      errorData.detail ||
+        `Error posting routing decision: ${response.statusText}`,
+    );
   }
   return await response.json();
 };
@@ -410,12 +442,17 @@ export const fetchSenderResolution = async (messageId, signal) => {
     );
     if (response.status === 404) return null;
     if (!response.ok) {
-      throw new Error(`Error fetching sender resolution: ${response.statusText}`);
+      throw new Error(
+        `Error fetching sender resolution: ${response.statusText}`,
+      );
     }
     return await response.json();
   } catch (error) {
     if (error.name !== "AbortError") {
-      console.error(`Failed to fetch sender resolution for ${messageId}`, error);
+      console.error(
+        `Failed to fetch sender resolution for ${messageId}`,
+        error,
+      );
     }
     throw error;
   }
@@ -437,7 +474,10 @@ export const postSenderResolutionDecision = async (messageId, body) => {
   );
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || `Error posting sender resolution decision: ${response.statusText}`);
+    throw new Error(
+      errorData.detail ||
+        `Error posting sender resolution decision: ${response.statusText}`,
+    );
   }
   return await response.json();
 };
@@ -447,15 +487,20 @@ export const postSenderResolutionDecision = async (messageId, body) => {
  * Body: { "enabled": true | false }
  */
 export const patchEmailAccount = async (accountId, body) => {
-  const response = await fetch(`${POLLER_API_BASE}/email-accounts/${accountId}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify(body),
-  });
+  const response = await fetch(
+    `${POLLER_API_BASE}/email-accounts/${accountId}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(body),
+    },
+  );
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || `Error updating account: ${response.statusText}`);
+    throw new Error(
+      errorData.detail || `Error updating account: ${response.statusText}`,
+    );
   }
   return await response.json();
 };
@@ -465,15 +510,22 @@ export const patchEmailAccount = async (accountId, body) => {
  * Returns 202 Accepted — the actual sync runs asynchronously.
  */
 export const postSyncAccount = async (accountId) => {
-  const response = await fetch(`${POLLER_API_BASE}/email-accounts/${accountId}/sync`, {
-    method: "POST",
-    credentials: "include",
-  });
+  const response = await fetch(
+    `${POLLER_API_BASE}/email-accounts/${accountId}/sync`,
+    {
+      method: "POST",
+      credentials: "include",
+    },
+  );
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || `Error syncing account: ${response.statusText}`);
+    throw new Error(
+      errorData.detail || `Error syncing account: ${response.statusText}`,
+    );
   }
-  return response.status === 204 ? null : await response.json().catch(() => null);
+  return response.status === 204
+    ? null
+    : await response.json().catch(() => null);
 };
 
 /**
@@ -489,7 +541,9 @@ export const createEmailAccount = async (body) => {
   });
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || `Error creating account: ${response.statusText}`);
+    throw new Error(
+      errorData.detail || `Error creating account: ${response.statusText}`,
+    );
   }
   return await response.json();
 };
@@ -499,15 +553,20 @@ export const createEmailAccount = async (body) => {
  * Body: { address, host, port, username, password }
  */
 export const updateEmailAccount = async (accountId, body) => {
-  const response = await fetch(`${POLLER_API_BASE}/email-accounts/${accountId}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify(body),
-  });
+  const response = await fetch(
+    `${POLLER_API_BASE}/email-accounts/${accountId}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(body),
+    },
+  );
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || `Error updating account: ${response.statusText}`);
+    throw new Error(
+      errorData.detail || `Error updating account: ${response.statusText}`,
+    );
   }
   return await response.json();
 };
@@ -556,12 +615,17 @@ export const fetchAttachmentProcessing = async (attachmentId, signal) => {
     );
     if (response.status === 404) return null;
     if (!response.ok) {
-      throw new Error(`Error fetching attachment processing: ${response.statusText}`);
+      throw new Error(
+        `Error fetching attachment processing: ${response.statusText}`,
+      );
     }
     return await response.json();
   } catch (error) {
     if (error.name !== "AbortError") {
-      console.error(`Failed to fetch attachment processing for ${attachmentId}`, error);
+      console.error(
+        `Failed to fetch attachment processing for ${attachmentId}`,
+        error,
+      );
     }
     throw error;
   }
@@ -581,22 +645,41 @@ export const postRetryJob = async (jobId) => {
   );
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || `Error retrying job: ${response.statusText}`);
+    throw new Error(
+      errorData.detail || `Error retrying job: ${response.statusText}`,
+    );
   }
-  return response.status === 204 ? null : await response.json().catch(() => null);
+  return response.status === 204
+    ? null
+    : await response.json().catch(() => null);
 };
 
 /**
  * Fetch total count of messages, optionally with a status filter.
  */
-export const fetchMessageCount = async (signal, statuses = []) => {
+export const fetchMessageCount = async (
+  signal,
+  statuses = [],
+  parseStatuses = [],
+  generationStatuses = [],
+  hasErrors = null,
+) => {
   try {
     let url = `${POLLER_API_BASE}/messages/count`;
-    if (statuses && statuses.length > 0) {
-      statuses.forEach((st, idx) => {
-        url += `${idx === 0 ? "?" : "&"}status_filter=${encodeURIComponent(st)}`;
-      });
+    const params = [];
+    statuses.forEach((st) =>
+      params.push(`status_filter=${encodeURIComponent(st)}`),
+    );
+    parseStatuses.forEach((st) =>
+      params.push(`parse_status_filter=${encodeURIComponent(st)}`),
+    );
+    generationStatuses.forEach((st) =>
+      params.push(`generation_status_filter=${encodeURIComponent(st)}`),
+    );
+    if (hasErrors !== null && hasErrors !== undefined) {
+      params.push(`has_errors=${hasErrors}`);
     }
+    if (params.length > 0) url += `?${params.join("&")}`;
     const response = await fetch(url, {
       method: "GET",
       headers: {
@@ -657,7 +740,10 @@ export const patchSubjectDraft = async (messageId, newSubject) => {
   );
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || `Error updating subject draft: ${response.statusText}`);
+    throw new Error(
+      errorData.detail ||
+        `Error updating subject draft: ${response.statusText}`,
+    );
   }
   return await response.json();
 };
@@ -681,12 +767,17 @@ export const fetchDocumentAnalysis = async (messageId, signal) => {
     );
     if (response.status === 404) return null;
     if (!response.ok) {
-      throw new Error(`Error fetching document analysis: ${response.statusText}`);
+      throw new Error(
+        `Error fetching document analysis: ${response.statusText}`,
+      );
     }
     return await response.json();
   } catch (error) {
     if (error.name !== "AbortError") {
-      console.error(`Failed to fetch document analysis for ${messageId}`, error);
+      console.error(
+        `Failed to fetch document analysis for ${messageId}`,
+        error,
+      );
     }
     throw error;
   }
@@ -707,7 +798,12 @@ export const fetchSystemHealth = async (signal) => {
     return await response.json();
   } catch (error) {
     if (error.name === "AbortError") throw error;
-    return { status: "degraded", llm: "unreachable", db: "unknown", llm_circuit: "UNKNOWN" };
+    return {
+      status: "degraded",
+      llm: "unreachable",
+      db: "unknown",
+      llm_circuit: "UNKNOWN",
+    };
   }
 };
 
@@ -721,10 +817,12 @@ export const fetchDailySummary = async (signal) => {
       credentials: "include",
       signal,
     });
-    if (!response.ok) throw new Error(`Daily summary error: ${response.statusText}`);
+    if (!response.ok)
+      throw new Error(`Daily summary error: ${response.statusText}`);
     return await response.json();
   } catch (error) {
-    if (error.name !== "AbortError") console.error("Failed to fetch daily summary", error);
+    if (error.name !== "AbortError")
+      console.error("Failed to fetch daily summary", error);
     throw error;
   }
 };
@@ -739,10 +837,12 @@ export const fetchRevisionRate = async (signal) => {
       credentials: "include",
       signal,
     });
-    if (!response.ok) throw new Error(`Revision rate error: ${response.statusText}`);
+    if (!response.ok)
+      throw new Error(`Revision rate error: ${response.statusText}`);
     return await response.json();
   } catch (error) {
-    if (error.name !== "AbortError") console.error("Failed to fetch revision rate", error);
+    if (error.name !== "AbortError")
+      console.error("Failed to fetch revision rate", error);
     throw error;
   }
 };
@@ -757,10 +857,12 @@ export const fetchPipelineFunnel = async (signal) => {
       credentials: "include",
       signal,
     });
-    if (!response.ok) throw new Error(`Pipeline funnel error: ${response.statusText}`);
+    if (!response.ok)
+      throw new Error(`Pipeline funnel error: ${response.statusText}`);
     return await response.json();
   } catch (error) {
-    if (error.name !== "AbortError") console.error("Failed to fetch pipeline funnel", error);
+    if (error.name !== "AbortError")
+      console.error("Failed to fetch pipeline funnel", error);
     throw error;
   }
 };

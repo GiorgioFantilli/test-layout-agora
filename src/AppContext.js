@@ -8,8 +8,8 @@ const defaultConfig = {
 
 // Initial state
 const initialState = {
-    currentView: 'pending',
-    previousView: 'pending',
+    currentView: 'ready',
+    previousView: 'ready',
     selectedEmailId: null,
     isFullscreen: false,
     emails: {},

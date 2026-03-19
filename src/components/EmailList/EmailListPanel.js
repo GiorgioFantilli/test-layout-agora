@@ -1,15 +1,9 @@
-import React, {
-  useEffect,
-  useRef,
-  useCallback,
-  useMemo,
-} from "react";
+import React, { useEffect, useRef, useCallback, useMemo } from "react";
 import { useAppContext } from "../../AppContext";
 import EmailItem from "./EmailItem";
 import AccountFilter from "./AccountFilter";
-import SearchModal from '../SearchModal';
+import SearchModal from "../SearchModal";
 import { useMessages, useEmailAccounts } from "../../hooks/useEmails";
-import { BACKEND_STATUS, FRONTEND_STATUS } from "../../services/dtoMappers";
 
 // Sentinel component that triggers an action when it enters the viewport
 function Sentinel({ onVisible, hasMore, isLoading }) {
@@ -58,17 +52,38 @@ function EmailListPanel() {
   const { state, dispatch } = useAppContext();
   const limit = 20;
 
-  const isPendingView = state.currentView === 'pending';
-
-  const currentStatuses = useMemo(
-    () => isPendingView ? [BACKEND_STATUS.PERSISTED] : [BACKEND_STATUS.PROCESSED],
-    [isPendingView]
-  );
+  // Filtri per ogni vista:
+  // ready      → generation_status COMPLETED|MANUAL_REVIEW, escludi errori
+  // processing → generation_status non terminale (NULL = pipeline AI non ancora avviata), escludi errori
+  // error      → has_errors=true
+  const viewFilters = useMemo(() => {
+    switch (state.currentView) {
+      case "ready":
+        return {
+          generationStatuses: ["COMPLETED", "MANUAL_REVIEW"],
+          hasErrors: false,
+        };
+      case "processing":
+        return {
+          generationStatuses: [
+            "NULL",
+            "PENDING",
+            "CONTEXT_READY",
+            "LLM_GENERATION",
+          ],
+          hasErrors: false,
+        };
+      case "error":
+        return { generationStatuses: [], hasErrors: true };
+      default:
+        return { generationStatuses: [], hasErrors: null };
+    }
+  }, [state.currentView]);
 
   const { data: accounts = [] } = useEmailAccounts();
   const disabledAccountIds = useMemo(
-    () => new Set(accounts.filter(a => !a.enabled).map(a => String(a.id))),
-    [accounts]
+    () => new Set(accounts.filter((a) => !a.enabled).map((a) => String(a.id))),
+    [accounts],
   );
 
   const {
@@ -77,12 +92,16 @@ function EmailListPanel() {
     hasNextPage,
     isFetching,
     isFetchingNextPage,
-    refetch
+    refetch,
   } = useMessages(
     limit,
-    currentStatuses,
+    [],
     state.selectedAccountIds,
-    state.searchFilters
+    state.searchFilters,
+    {},
+    [],
+    viewFilters.generationStatuses,
+    viewFilters.hasErrors,
   );
 
   useEffect(() => {
@@ -90,9 +109,9 @@ function EmailListPanel() {
       const isFirstPage = infiniteData.pages?.length === 1;
       const emailsMap = {};
 
-      infiniteData.pages.forEach(page => {
+      infiniteData.pages.forEach((page) => {
         if (page?.result) {
-          page.result.forEach(email => {
+          page.result.forEach((email) => {
             emailsMap[email.id] = email;
           });
         }
@@ -115,36 +134,33 @@ function EmailListPanel() {
     dispatch({ type: "SELECT_EMAIL", payload: emailId });
   };
 
-  const allEmails = Object.entries(state.emails);
-
-  const pendingEmails = allEmails.filter(
-    ([id, email]) =>
-      (email.status === FRONTEND_STATUS.PENDING || email.status === FRONTEND_STATUS.ANALYZED) &&
-      (state.selectedAccountIds?.length === 0 || state.selectedAccountIds?.some(aid => String(aid) === String(email.account_id)))
+  const currentEmails = Object.entries(state.emails).filter(
+    ([, email]) =>
+      state.selectedAccountIds?.length === 0 ||
+      state.selectedAccountIds?.some(
+        (aid) => String(aid) === String(email.account_id),
+      ),
   );
-
-  const processedEmails = allEmails.filter(
-    ([id, email]) =>
-      email.status === FRONTEND_STATUS.PROCESSED &&
-      (state.selectedAccountIds?.length === 0 || state.selectedAccountIds?.some(aid => String(aid) === String(email.account_id)))
-  );
-
-  const currentEmails = isPendingView ? pendingEmails : processedEmails;
   const visibleDisabledAccounts = useMemo(() => {
     const visibleDisabledIds = new Set(
       currentEmails
         .filter(([, email]) => disabledAccountIds.has(String(email.account_id)))
-        .map(([, email]) => String(email.account_id))
+        .map(([, email]) => String(email.account_id)),
     );
-    return accounts.filter(a => visibleDisabledIds.has(String(a.id)));
+    return accounts.filter((a) => visibleDisabledIds.has(String(a.id)));
   }, [currentEmails, disabledAccountIds, accounts]);
 
-  const subheadText = state.currentView === "pending" ? "Da Protocollare" : "Protocollate";
+  const subheadTextMap = {
+    ready: "Da lavorare",
+    processing: "In elaborazione",
+    error: "In errore",
+  };
+  const subheadText = subheadTextMap[state.currentView] ?? "";
 
   return (
     <>
       <div
-        className={`email-list-scroll-area fade-in scrollbar-styled ${state.currentView !== state.previousView ? 'content-fade-in' : ''}`}
+        className={`email-list-scroll-area fade-in scrollbar-styled ${state.currentView !== state.previousView ? "content-fade-in" : ""}`}
       >
         <div className="list-main-header">
           <div className="title-subhead-stack">
@@ -156,7 +172,7 @@ function EmailListPanel() {
             <button
               className="header-action-btn"
               title="Cerca"
-              onClick={() => dispatch({ type: 'TOGGLE_SEARCH' })}
+              onClick={() => dispatch({ type: "TOGGLE_SEARCH" })}
             >
               <i className="fas fa-search"></i>
             </button>
@@ -166,7 +182,9 @@ function EmailListPanel() {
               onClick={() => refetch()}
               disabled={isFetching && !isFetchingNextPage}
             >
-              <i className={`fas fa-sync-alt ${isFetching && !isFetchingNextPage ? "fa-spin" : ""}`}></i>
+              <i
+                className={`fas fa-sync-alt ${isFetching && !isFetchingNextPage ? "fa-spin" : ""}`}
+              ></i>
             </button>
           </div>
         </div>
@@ -175,59 +193,48 @@ function EmailListPanel() {
           <div className="disabled-accounts-banner">
             <i className="fas fa-pause-circle"></i>
             <span>
-              {visibleDisabledAccounts.length === 1
-                ? <><strong>{visibleDisabledAccounts[0].address}</strong> è inattiva — non riceverà nuovi messaggi</>
-                : <>Alcune caselle visibili sono inattive — non riceveranno nuovi messaggi</>
-              }
+              {visibleDisabledAccounts.length === 1 ? (
+                <>
+                  <strong>{visibleDisabledAccounts[0].address}</strong> è
+                  inattiva — non riceverà nuovi messaggi
+                </>
+              ) : (
+                <>
+                  Alcune caselle visibili sono inattive — non riceveranno nuovi
+                  messaggi
+                </>
+              )}
             </span>
             <button
               className="disabled-accounts-banner-cta"
-              onClick={() => dispatch({ type: 'SWITCH_VIEW', payload: 'dashboard' })}
+              onClick={() =>
+                dispatch({ type: "SWITCH_VIEW", payload: "dashboard" })
+              }
             >
               Gestisci <i className="fas fa-arrow-right"></i>
             </button>
           </div>
         )}
 
-        {state.currentView === "pending" ? (
-          <div id="pending-section">
-            <div id="email-list" className="email-list-container">
-              {pendingEmails.map(([id, email]) => (
-                <EmailItem
-                  key={id}
-                  emailId={id}
-                  email={email}
-                  onSelect={handleSelectEmail}
-                  isSelected={state.selectedEmailId === id}
-                  isAccountDisabled={disabledAccountIds.has(String(email.account_id))}
-                />
-              ))}
-              <Sentinel hasMore={hasNextPage} isLoading={isFetchingNextPage} onVisible={loadMore} />
-            </div>
-          </div>
-        ) : (
-          <div id="processed-section">
-            <div id="email-list" className="email-list-container">
-              {processedEmails
-                .sort(([idA, emailA], [idB, emailB]) => {
-                  const dateA = emailA.date ? new Date(emailA.date).getTime() : 0;
-                  const dateB = emailB.date ? new Date(emailB.date).getTime() : 0;
-                  return dateB - dateA;
-                })
-                .map(([id, email]) => (
-                  <EmailItem
-                    key={id}
-                    emailId={id}
-                    email={email}
-                    onSelect={handleSelectEmail}
-                    isSelected={state.selectedEmailId === id}
-                    isAccountDisabled={disabledAccountIds.has(String(email.account_id))}
-                  />
-                ))}
-              <Sentinel hasMore={hasNextPage} isLoading={isFetchingNextPage} onVisible={loadMore} />
-            </div>
-          </div>
-        )}
+        <div id="email-list" className="email-list-container">
+          {currentEmails.map(([id, email]) => (
+            <EmailItem
+              key={id}
+              emailId={id}
+              email={email}
+              onSelect={handleSelectEmail}
+              isSelected={state.selectedEmailId === id}
+              isAccountDisabled={disabledAccountIds.has(
+                String(email.account_id),
+              )}
+            />
+          ))}
+          <Sentinel
+            hasMore={hasNextPage}
+            isLoading={isFetchingNextPage}
+            onVisible={loadMore}
+          />
+        </div>
         <SearchModal />
       </div>
     </>

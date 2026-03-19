@@ -1,4 +1,9 @@
-import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  useInfiniteQuery,
+} from "@tanstack/react-query";
 import {
   fetchMessages,
   fetchParsedMessage,
@@ -39,71 +44,111 @@ import {
  * Hook for fetching messages with polling and infinite scroll support
  */
 export const useMessages = (
-    limit = 50,
-    statuses = [],
-    accountIds = [],
-    extraFilters = {},
-    options = {}
+  limit = 50,
+  statuses = [],
+  accountIds = [],
+  extraFilters = {},
+  options = {},
+  parseStatuses = [],
+  generationStatuses = [],
+  hasErrors = null,
 ) => {
-    return useInfiniteQuery({
-        queryKey: ['messages', { limit, statuses, accountIds, extraFilters }],
+  return useInfiniteQuery({
+    queryKey: [
+      "messages",
+      {
+        limit,
+        statuses,
+        accountIds,
+        extraFilters,
+        parseStatuses,
+        generationStatuses,
+        hasErrors,
+      },
+    ],
 
-        queryFn: ({ pageParam = 0, signal }) =>
-            fetchMessages(signal, limit, pageParam, statuses, accountIds, extraFilters),
+    queryFn: ({ pageParam = 0, signal }) =>
+      fetchMessages(
+        signal,
+        limit,
+        pageParam,
+        statuses,
+        accountIds,
+        extraFilters,
+        "date",
+        "desc",
+        parseStatuses,
+        generationStatuses,
+        hasErrors,
+      ),
 
-        getNextPageParam: (lastPage) => lastPage?.nextSkip,
+    getNextPageParam: (lastPage) => lastPage?.nextSkip,
 
-        refetchInterval: 10000,
-        refetchOnWindowFocus: true,
-        staleTime: 5000,
+    refetchInterval: 10000,
+    refetchOnWindowFocus: true,
+    staleTime: 5000,
 
-        ...options,
-    });
+    ...options,
+  });
 };
 
 /**
  * Hook for fetching parsed message details
  */
 export const useParsedMessage = (messageId, options = {}) => {
-    return useQuery({
-        queryKey: ["parsedMessage", messageId],
+  return useQuery({
+    queryKey: ["parsedMessage", messageId],
 
-        queryFn: ({ signal }) => fetchParsedMessage(messageId, signal),
+    queryFn: ({ signal }) => fetchParsedMessage(messageId, signal),
 
-        enabled: !!messageId,
-        refetchOnWindowFocus: true,
-        staleTime: 60000,
+    enabled: !!messageId,
+    refetchOnWindowFocus: true,
+    staleTime: 60000,
 
-        ...options,
-    });
+    ...options,
+  });
 };
 
 /**
  * Hook for fetching all email accounts
  */
 export const useEmailAccounts = (options = {}) => {
-    return useQuery({
-        queryKey: ["emailAccounts"],
-        queryFn: ({ signal }) => fetchEmailAccounts(signal),
-        staleTime: 60000,
-        ...options,
-    });
+  return useQuery({
+    queryKey: ["emailAccounts"],
+    queryFn: ({ signal }) => fetchEmailAccounts(signal),
+    staleTime: 60000,
+    ...options,
+  });
 };
 
 /**
  * Hook for fetching message count by status
  */
-export const useMessageCount = (statuses = [], options = {}) => {
-    return useQuery({
-        queryKey: ["messageCount", { statuses }],
-        queryFn: ({ signal }) => fetchMessageCount(signal, statuses),
-        refetchInterval: 15000,
-        staleTime: 10000,
-        ...options,
-    });
+export const useMessageCount = (
+  statuses = [],
+  options = {},
+  parseStatuses = [],
+  generationStatuses = [],
+  hasErrors = null,
+) => {
+  return useQuery({
+    queryKey: [
+      "messageCount",
+      { statuses, parseStatuses, generationStatuses, hasErrors },
+    ],
+    queryFn: ({ signal }) =>
+      fetchMessageCount(
+        signal,
+        statuses,
+        parseStatuses,
+        generationStatuses,
+        hasErrors,
+      ),
+    refetchInterval: 15000,
+    staleTime: 10000,
+    ...options,
+  });
 };
-
-
 
 /**
  * Hook for fetching AI subject context from the Subject Context Builder.
@@ -120,9 +165,9 @@ export const useSubjectContext = (messageId, options = {}) => {
     staleTime: 30000,
     refetchInterval: (query) => {
       const status = query.state.data?.status;
-      if (status === "pending") return 5000;          // SCB in elaborazione → poll veloce
-      if (query.state.data === null) return 15000;    // SCB non ancora partito → poll lento
-      return false;                                   // completed/manual_review → stop
+      if (status === "pending") return 5000; // SCB in elaborazione → poll veloce
+      if (query.state.data === null) return 15000; // SCB non ancora partito → poll lento
+      return false; // completed/manual_review → stop
     },
     ...options,
   });
@@ -159,7 +204,9 @@ export const useRoutingSuggestion = (messageId, options = {}) => {
     enabled: !!messageId,
     staleTime: 20000,
     refetchInterval: (query) =>
-      ["queued", "in_progress"].includes(query.state.data?.status) ? 3000 : false,
+      ["queued", "in_progress"].includes(query.state.data?.status)
+        ? 3000
+        : false,
     ...options,
   });
 };
@@ -173,7 +220,9 @@ export const useRoutingDecision = (messageId) => {
   return useMutation({
     mutationFn: (body) => postRoutingDecision(messageId, body),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["routingSuggestion", messageId] });
+      queryClient.invalidateQueries({
+        queryKey: ["routingSuggestion", messageId],
+      });
     },
   });
 };
@@ -207,7 +256,9 @@ export const useSenderResolutionDecision = (messageId) => {
   return useMutation({
     mutationFn: (body) => postSenderResolutionDecision(messageId, body),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["senderResolution", messageId] });
+      queryClient.invalidateQueries({
+        queryKey: ["senderResolution", messageId],
+      });
     },
   });
 };
@@ -216,13 +267,13 @@ export const useSenderResolutionDecision = (messageId) => {
  * Hook for fetching message details
  */
 export const useMessageDetails = (messageId, options = {}) => {
-    return useQuery({
-        queryKey: ["messageDetails", messageId],
-        queryFn: ({ signal }) => fetchMessageDetails(messageId, signal),
-        enabled: !!messageId,
-        refetchOnWindowFocus: false,
-        ...options,
-    });
+  return useQuery({
+    queryKey: ["messageDetails", messageId],
+    queryFn: ({ signal }) => fetchMessageDetails(messageId, signal),
+    enabled: !!messageId,
+    refetchOnWindowFocus: false,
+    ...options,
+  });
 };
 
 /**
@@ -233,7 +284,8 @@ export const useMessageDetails = (messageId, options = {}) => {
 export const useToggleAccount = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ accountId, enabled }) => patchEmailAccount(accountId, { enabled }),
+    mutationFn: ({ accountId, enabled }) =>
+      patchEmailAccount(accountId, { enabled }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["emailAccounts"] });
       queryClient.invalidateQueries({ queryKey: ["dashboardStats"] });
@@ -315,7 +367,9 @@ export const useAttachmentProcessing = (attachmentId, options = {}) => {
     staleTime: 10000,
     refetchInterval: (query) => {
       const status = query.state.data?.job?.status;
-      return status && ["QUEUED", "IN_PROGRESS"].includes(status) ? 3000 : false;
+      return status && ["QUEUED", "IN_PROGRESS"].includes(status)
+        ? 3000
+        : false;
     },
     ...options,
   });
@@ -331,7 +385,9 @@ export const useRetryJob = () => {
   return useMutation({
     mutationFn: ({ jobId }) => postRetryJob(jobId),
     onSuccess: (_, { attachmentId }) => {
-      queryClient.invalidateQueries({ queryKey: ["attachmentProcessing", attachmentId] });
+      queryClient.invalidateQueries({
+        queryKey: ["attachmentProcessing", attachmentId],
+      });
     },
   });
 };
@@ -346,7 +402,9 @@ export const useUpdateSubjectDraft = (messageId) => {
   return useMutation({
     mutationFn: (newSubject) => patchSubjectDraft(messageId, newSubject),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["subjectContext", messageId] });
+      queryClient.invalidateQueries({
+        queryKey: ["subjectContext", messageId],
+      });
     },
   });
 };
